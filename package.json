@@ -1,4 +1,9 @@
 {
+    "name": "bundless",
+    "version": "1.0.0",
+    "description": "Build on Browser, Bundle less",
+    "main": "dist/budnless.acorn.min.js",
+    
     "scripts": {  
         "buildb": "esbuild ./src/bundless.babel.js --bundle --minify --outfile=./dist/bundless.babel.min.js --format=esm",
         "compress": "brotli-cli compress ./dist/bundless.acorn.min.js && brotli-cli compress ./dist/bundless.babel.min.js",
