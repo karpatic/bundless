@@ -1,0 +1,14 @@
+{
+    "scripts": {  
+        "buildb": "esbuild ./src/bundless.babel.js --bundle --minify --outfile=./dist/bundless.babel.min.js --format=esm",
+        "compress": "brotli-cli compress ./dist/bundless.acorn.min.js && brotli-cli compress ./dist/bundless.babel.min.js",
+        "rolla": "rollup ./src/bundless.acorn.js --file ./dist/bundless.acorn.min.js --format esm && npx terser ./dist/bundless.acorn.min.js --compress --output ./dist/bundless.acorn.min.js && brotli-cli compress ./dist/bundless.acorn.min.js",
+        "rollb": "rollup ./src/bundless.babel.js --file ./dist/bundless.babel.min.js --format esm",
+        "minifyjsx": "npx terser ./rsc/acorn-jsx.js --compress --output ./rsc/acorn-jsx.min.mjs", 
+        "minifyacorn": "esbuild ./rsc/acorn.mjs --bundle --minify --outfile=./rsc/acorn.min.mjs --format=esm"
+    },
+    "devDependencies": {
+        "rollup": "^2.79.2",
+        "rollup-plugin-terser": "^7.0.2"
+    }
+}
