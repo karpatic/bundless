@@ -11,7 +11,7 @@ function App(){
     }, [markdown]);
     
     React.useEffect(() => {
-        fetch('./README.MD')
+        fetch('./tests/README.MD')
             .then(res => res.text())
             .then(text => {
                 setMarkdown(text);

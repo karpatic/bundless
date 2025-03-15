@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Bundless.Dev</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Acorn Parser Demo" />
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@17.0.2/es2022/react.mjs",
+          "react-dom": "https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs",
+          "marked": "https://esm.sh/marked@2.0.1"
+        }
+      }
+    </script>
+    <script src="https://esm.sh/react@17.0.2/es2022/react.mjs" type="module"></script>
+    <script src="https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs" type="module" ></script>
+    <script src="/dist/bundless.acorn.min.js"></script>
+  </head>
+  <body>
+    <h1>Bundless Demo</h1>
+
+    <h2>More Examples:</h2>
+    <ul> 
+      <li><a href="/tests/baseline_a.html">Acorn Speed Test</a></li>
+      <li><a href="/tests/demo_a.html">Acorn Parser</a></li>
+      <li><a href="/tests/demo_b.html">Babel Parser</a></li>
+    </ul>
+
+
+    <h2>Input Code</h2> 
+    <textarea id="jsx-code" rows="10" cols="80">
+import React from 'react';
+import ReactDOM from 'react-dom';
+
+const App = () => React.createElement('h1', null, 'Hello, World!');
+
+ReactDOM.render(React.createElement(App), document.getElementById('react-root'));
+  </textarea> 
+    <button id="run-jsx">Transpile JSX</button>
+
+    <h2>Transpiled Code</h2>
+    <textarea id="transpiled-code" rows="10" cols="80" readonly></textarea>
+
+    <h2>Output In Iframe</h2>
+    <iframe id="output-frame" style="width: 100%; height: 300px"></iframe>
+
+    <script> 
+      document.getElementById("run-jsx").addEventListener("click", async () => {
+ 
+        // Transpile
+        const jsxCode = document.getElementById("jsx-code").value;
+        const transpiledCode = await window.transpileCode(jsxCode, "./", false);
+        document.getElementById("transpiled-code").value = transpiledCode;
+
+        // Create the Iframe
+        const html = document.documentElement.cloneNode(true).outerHTML;
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+        doc.body.innerHTML = '<div id="react-root"></div>'; 
+
+        // Insert
+        const script = document.createElement("script");
+        script.type = "module";
+        script.textContent = transpiledCode;
+        doc.body.appendChild(script); 
+        const iframe = document.getElementById("output-frame");
+        iframe.srcdoc = doc.documentElement.outerHTML;
+      });
+    </script>
+  </body>
+</html>

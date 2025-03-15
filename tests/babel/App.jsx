@@ -21,7 +21,7 @@ function App() {
   if(TextComponent){
     return (
       <div style={{ padding: '20px' }}>
-        <h1>Acorn Demo works!</h1> 
+        <h1>Babel Dynamic Import Work Too!</h1> 
         {<TextComponent text={text} onChange={setText} /> }
       </div>
     );
@@ -29,7 +29,7 @@ function App() {
 
   return (
     <div>
-      One moment plesae...
+      Bundless Babel Works!
     <p>Number: {number}</p>
     <button onClick={incrementNumber}>Increment</button>
   </div>

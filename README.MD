@@ -1,43 +1,46 @@
-# Build more, bundle less.
+# Build more, bundle less. 
 
-**Bundless.js**: Resolve and transpile ReactJSX modules directly in the browser. Create multi-page React apps, without a build system, using web servers like Flask, Apache, GitHub, and VSCode.
+Create react apps using only a file server.
 
-[Demo](https://bundles.dev/index.html)
+**Bundless.js**: A 35kb browser shim to resolve and tanspile JSX dependencies at runtime
 
-## Usage 
+## Usage  
 
-Import `Bundless`:
+Bundless processes all `type='text/jsx'` and `text/babel` tags onDomLoad
 
+<a href="/dist/bundless.babel.min.js" target="_blank"><strong>Development</strong></a>: 500Kb | no caching | source-maps.
 ```
-</script src="https://bundless.dev/rsc/bundless.acorn.min.js" type="text/javascript"> 
-```
-
-Then import your_app:
-
-```
-</script type="text/jsx" src="./YOUR_APP.jsx">
-<!-- Or -->
-<script type="text/jsx" >
-    import { named, xport } from "./YOUR_APP.jsx"       // or
-    import defaultExport from "./YOUR_APP.jsx"          // or
-    import * as module from "./YOUR_APP.jsx"            // or
-    const module = await import("./YOUR_APP.jsx")
-</script>
+</script src="./bundless.babel.min.js"> 
 ``` 
- 
-### How does it work?  
 
-1. `Bundless` will recursively transpile your code using:
-    - ```.acorn```: 30kb but no source-map
-    - ```.babel```: 500Kb but with source-maps
-2. Static imports are retrieved and inserted into the page as modules.
-3. Dynamic import() behavior is overwritten.   
+<a href="/dist/bundless.acorn.min.js" target="_blank"><strong>Production</strong></a>: 35Kb | caching | no source-maps.
+```
+</script src="./bundless.acorn.min.js"> 
+``` 
+
+That's all there is to it! 
+
+- This page was made with Bundless - [Try it out](./tests/index.html) - [Examples](./tests/index.html)
  
- 
+### How it works
+
+1. Modules are resolved using `<script type="importmap">`
+1. Static imports are inserted into the page as modules.
+2. Dynamic imports() are overriden. 
+
 ## A word from Babel
 
 <blockquote>
     You should use a build system running on Node.js, such as Webpack, Rollup, or Parcel, to transpile your JS ahead of time. - <a href="https://babeljs.io/docs/babel-standalone">Babel Docs</a>
 </blockquote>
 
- 
+## Memes
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+    <img src="/memes/meme_what_gives_peope_feelings_of_power.jpg" style="width:300px;" /> 
+    <img src="/memes/meme_did_you_just_take_both_pills.jpeg" style="width:300px;" />  
+    <img src="/memes/meme_running_away_ballon.jpg" style="width:300px;" /> 
+    <img src="/memes/meme_anime_girl_hiding_from_terminator.jpg" style="width:300px;" /> 
+    <img src="/memes/meme_goose_chase.jpg" style="width:300px;" /> 
+    <img src="/memes/meme_left_exit_12_off_ramp.jpg" style="width:300px;" />  
+</div>
