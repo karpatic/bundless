@@ -3,17 +3,32 @@
     "version": "1.0.0",
     "description": "Build on Browser, Bundle less",
     "main": "dist/budnless.acorn.min.js",
-    
-    "scripts": {  
+    "scripts": {
         "buildb": "esbuild ./src/bundless.babel.js --bundle --minify --outfile=./dist/bundless.babel.min.js --format=esm",
         "compress": "brotli-cli compress ./dist/bundless.acorn.min.js && brotli-cli compress ./dist/bundless.babel.min.js",
         "rolla": "rollup ./src/bundless.acorn.js --file ./dist/bundless.acorn.min.js --format esm && npx terser ./dist/bundless.acorn.min.js --compress --output ./dist/bundless.acorn.min.js && brotli-cli compress ./dist/bundless.acorn.min.js",
         "rollb": "rollup ./src/bundless.babel.js --file ./dist/bundless.babel.min.js --format esm",
-        "minifyjsx": "npx terser ./rsc/acorn-jsx.js --compress --output ./rsc/acorn-jsx.min.mjs", 
-        "minifyacorn": "esbuild ./rsc/acorn.mjs --bundle --minify --outfile=./rsc/acorn.min.mjs --format=esm"
+        "rollm": "rollup ./src/bundless.meriyah.js --file ./dist/bundless.meriyah.min.js --format esm && npx terser ./dist/bundless.meriyah.min.js --compress --output ./dist/bundless.meriyah.min.js && brotli-cli compress ./dist/bundless.meriyah.min.js",
+        "rolls": "rollup ./src/bundless.sucrase.js --file ./dist/bundless.sucrase.min.js --format esm && npx terser ./dist/bundless.sucrase.min.js --compress --output ./dist/bundless.sucrase.min.js && brotli-cli compress ./dist/bundless.sucrase.min.js",
+        "minifyjsx": "npx terser ./rsc/acorn/acorn-jsx.js --compress --output ./rsc/acorn/acorn-jsx.min.mjs",
+        "minifyacorn": "esbuild ./rsc/acorn/acorn.mjs --bundle --minify --outfile=./rsc/acorn/acorn.min.mjs --format=esm",
+        "build-react": "webpack --config webpack.config.js && brotli-cli compress ./benchmarks/react.js",
+        "dev": "webpack serve --mode development --open"
     },
     "devDependencies": {
+        "@babel/core": "^7.15.5",
+        "@babel/preset-env": "^7.15.6",
+        "@babel/preset-react": "^7.15.7",
+        "babel-loader": "^8.2.3",
         "rollup": "^2.79.2",
-        "rollup-plugin-terser": "^7.0.2"
+        "rollup-plugin-terser": "^7.0.2",
+        "terser-webpack-plugin": "^5.3.14",
+        "webpack": "^5.98.0",
+        "webpack-cli": "^4.10.0",
+        "webpack-dev-server": "^4.15.2"
+    },
+    "dependencies": {
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1"
     }
 }

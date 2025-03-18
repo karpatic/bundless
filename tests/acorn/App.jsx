@@ -1,7 +1,6 @@
-console.log('App.js Loaded');  
-
 import React from 'react'; 
 import ReactDOM from 'react-dom'; 
+import Child from './Child.jsx';
 
 function App() { 
   let [TextComponent, setTextComponent] = React.useState(false);
@@ -22,6 +21,7 @@ function App() {
     return (
       <div style={{ padding: '20px' }}>
         <h1>Acorn Dynamic Import Works Too!</h1> 
+        <Child text={text}/>
         {<TextComponent text={text} onChange={setText} /> }
       </div>
     );

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Meriyah Parser Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Meriyah Parser Demo" /> 
+ 
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@17.0.2/es2022/react.mjs",
+          "react-dom": "https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs",
+          "meriyah": "https://cdn.jsdelivr.net/npm/meriyah@6.0.5/+esm"
+        }
+      }
+    </script>
+    <script src="https://esm.sh/react@17.0.2/es2022/react.mjs" type="module"></script>
+    <script src="https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs" type="module"></script> 
+  </head>
+  <body>
+    <h1>Meriyah Demo</h1> 
+
+    <h2>Input Code</h2> 
+    <textarea id="jsx-code" rows="12" cols="90">
+import React from 'react';
+import ReactDOM from 'react-dom';
+
+intentionalError
+
+const App = () => {
+  return (
+    <h1>Hello, World!</h1>
+  );
+};
+
+ReactDOM.render(<App />, document.getElementById('react-root'));
+    </textarea> 
+    <button id="run-jsx">Transpile JSX</button>
+
+    <h2>AST</h2>
+    <textarea id="transpiled-code" rows="12" cols="90" readonly></textarea> 
+
+    <script type="module">   
+      import * as meriyah from 'meriyah';
+
+      console.log('Meriyah:', meriyah);
+
+      window.transpileCode = async (code) => {
+      try {
+        const ast = meriyah.parse(code, {
+          module: true,
+          jsx: true,
+          webcompat: true,
+          loc: true,
+          ranges: true,
+          raw: true,
+          impliedStrict: true,
+          onComment: (type, value, start, end) => {
+            console.log(`Comment: ${type} - ${value} [${start}, ${end}]`);
+          },
+          onToken: (token) => {
+            console.log('Token:', token);
+          }
+        });
+        return JSON.stringify(ast, null, 2);
+      } catch (error) {
+        console.error('Error parsing code:', error);
+        return `Error: ${error.message}`;
+      }
+    };
+
+      document.getElementById("run-jsx").addEventListener("click", async () => {
+        console.log("Transpile button clicked");
+        // Transpile
+        const jsxCode = document.getElementById("jsx-code").value;
+        console.log("JSX Code:", jsxCode);
+        const transpiledCode = await window.transpileCode(jsxCode);
+        document.getElementById("transpiled-code").value = transpiledCode; 
+      });
+    </script>
+  </body>
+</html>

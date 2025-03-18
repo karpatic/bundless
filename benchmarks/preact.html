@@ -1,0 +1,36 @@
+<!doctype html>
+<head>
+  <meta charset="utf-8">
+  <title>Acorn Parser Demo</title> 
+</head> 
+<body>
+<script type="importmap">
+{
+  "imports": {
+    "preact": "https://esm.sh/preact@10.5.13/es2022/preact.mjs",
+    "preact/hooks": "https://esm.sh/preact@10.5.13/es2022/hooks.mjs"
+  }
+}
+</script>
+<div id="react-root"></div>  
+<script src="https://esm.sh/preact@10.5.13/es2022/preact.mjs" type="module"></script>
+<script src="https://esm.sh/preact@10.5.13/es2022/hooks.mjs" type="module"></script> 
+<script type="module">
+  import { h, render } from 'preact';
+  import { useState } from 'preact/hooks';
+
+  function Counter() {
+    const [count, setCount] = useState(0);
+    return (
+      h('div', null,
+        h('button', { onClick: () => setCount(count - 1) }, '-'),
+        h('span', null, `Count: ${count}`),
+        h('button', { onClick: () => setCount(count + 1) }, '+')
+      )
+    );
+  }
+
+  render(h(Counter), document.getElementById('react-root'));
+</script>
+</body>
+</html>

@@ -44,3 +44,16 @@ That's all there is to it!
     <img src="/memes/meme_goose_chase.jpg" style="width:300px;" /> 
     <img src="/memes/meme_left_exit_12_off_ramp.jpg" style="width:300px;" />  
 </div>
+
+## Why Don't more people develop with Preact client-side?
+My  best guess is that the subtle differences in notation between Preact and React are the major constraint. The second major issue is that Preact and htm() use String Template Literals rather than JSX which most parsers and linters do not natively interperet for syntax highlighting.
+
+It is possible to improve VS Code Intelisense to support Preact JSX. The problem is that VS Code assumes JSX = React, so intelisense doesnt catch Preact-specifics like h(). Typescript users beware, React’s TS definitions (@types/react) are officially supported but not @types/preact
+
+## Functional React V Preact/Compat   
+If you use preact/compat, most React code works, but be mindful: 
+👉 Preact Portals require a DOM element
+👉 Preact Context API consumers need a provider.
+👉 Preact Uses `e.target.value` instead of `e.currentTarget.value`   
+👉 Preact Uses `inputRef.focus()` instead of `inputRef.current.focus()`
+👉 Preact Uses  `e.currentTarget.value` instead of `e.target.value`  

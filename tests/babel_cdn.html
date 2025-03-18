@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>React in Browser with Babel</title>
+    <!-- Include React, ReactDOM, and Babel Standalone -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </head>
+  <body>
+    <h2>Babel Cant' can't resolve dependencies</h2>
+    <div id="root"></div>
+    <!-- Load App.js using Babel Standalone -->
+    <script type="text/babel" data-type="module" data-presets="react">
+      import '/tests/babel/App.js';
+      // Your React App code here
+
+      const App = () => {
+        return (
+          <div>
+            <h1>Hello, React in the Browser!</h1>
+            <p>This React code is being compiled directly in the browser using Babel Standalone!</p>
+          </div>
+        );
+      };
+
+      const rootElement = document.getElementById('root');
+      ReactDOM.render(<App />, rootElement);
+    </script>
+  </body>
+</html>

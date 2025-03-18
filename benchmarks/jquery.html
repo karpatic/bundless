@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>jQuery Example</title>
+  <style>
+    .highlighted { background-color: yellow; }
+    .box {
+      width: 100px;
+      height: 100px;
+      background-color: blue;
+      margin: 10px;
+    }
+  </style>
+  <!-- Include jQuery from CDN -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+</head>
+<body>
+  <h1>jQuery Examples</h1>
+  
+  <div id="content"> 
+  <div id="counter-example">
+    <h2>Counter Example</h2>
+    <button id="counter-btn">Clicks: 0</button>
+  </div>
+
+  <script>
+    $(function() {  
+      // Counter example
+      $("#counter-btn").click(function() {
+        let currentClicks = parseInt($(this).text().split(': ')[1]);
+        $(this).text('Clicks: ' + (currentClicks + 1));
+      });
+    });
+  </script>
+</body>
+</html>

@@ -12,45 +12,60 @@ async function processScripts(scriptTags) {
       jsxCode = scriptTag.textContent;
     }
     const filename = scriptTag.src ? scriptTag.src.split("/").slice(-1)[0] : 'inline script';
-    const basePath = scriptTag.src
+    let pathTo = scriptTag.src
       ? scriptTag.src.split("/").slice(0, -1).join("/")
       : location.href.split("/").slice(0, -1).join("/");
-    const transpiledCode = await window.transpileCode(jsxCode, basePath, filename);
+    // add 
+    if (pathTo && !filename.match(/^(http|\.|\/)/)) {
+      pathTo += "/";
+    }
+
+    // console.log('processScripts: transpileCode:', {pathTo, filename});
+    const transpiledCode = await window.transpileCode(jsxCode, pathTo, filename);
     insertScript(transpiledCode);
   }
-}
-window.processScripts = processScripts;
+} 
 
+let dynamicImportList = false;
 window.import = async function (path) {
-  console.log("~~~~ window.import: ", path);
+  // console.log("~~~~ window.import: ", path);
+  dynamicImportList = [];
   let basePath = path.split("/").slice(0, -1).join("/");
+  // console.log("~~~~ basePath: ", basePath);
   const response = await fetch(path);
-  if (!response.ok) throw new Error(`Failed to load ${path}`);
+  if (!response.ok) {
+    console.error(`Failed to load ${path}: ${response.statusText}`);
+    throw new Error(`Failed to load ${path}`);
+  }
   const code = await response.text();
+  // console.log("~~~~ code: ", code);
   const transpiledCode = await window.transpileCode(code, basePath);
   const blob = new Blob([transpiledCode], { type: "application/javascript" });
   const url = URL.createObjectURL(blob);
-  const module = await import(url);
-  return module;
+  // console.log("~~~~ blob URL: ", url);
+  try {
+    const module = await import(url);
+    return module;
+  } catch (error) {
+    console.error(`Failed to import module from ${url}: ${error.message}`);
+    throw error;
+  } finally {
+    URL.revokeObjectURL(url); // Clean up the blob URL
+  }
+  dynamicImportList = false;
 };
 
-const importList = [];
+const importList = []; 
 function insertScript(transpiledCode) {
-  console.log('inserting')
+  // console.log('insertScript', {transpiledCode})
   const script = document.createElement("script");
   script.type = "module";
-  script.textContent = transpiledCode;
-  script.onload = () => {
-    console.log("Script executed successfully");
-  };
-  script.onerror = (error) => {
-    console.log("Script failed to execute:", error);
-  };
+  script.textContent = transpiledCode; 
   document.body.appendChild(script);
 }
 
-async function handleImports(code, basePath, filename) {
-  console.log('handleImports:', filename);
+async function handleImports(code, pathTo, filename) {
+  // console.log('handleImports:', filename);
   const lines = code.split("\n");
   const transformedLines = [];
 
@@ -64,7 +79,7 @@ async function handleImports(code, basePath, filename) {
       }
       let importParts = line.trim().split(" ");
       let importPath = importParts.at(-1).replaceAll(/['";]/g, "");
-      let moduleName = importPath.split("/").slice(-1)[0];
+      let moduleName = importPath.split("/").slice(-1)[0]; 
 
       let done = false;
       let inBrackets = false;
@@ -84,12 +99,14 @@ async function handleImports(code, basePath, filename) {
             inBrackets = true;
             return false;
           }
-          // if (importList.includes(part)) {
-          // return false;
-          // }
+          let list = dynamicImportList ? dynamicImportList : importList;
+          if (list.includes(part)) {
+            // console.log(`Transpiler: Already Imported: ${part}`);
+            return false;
+          }
           else {
-            // console.log('Transpiler: Part:', part);
-            importList.push(part);
+            // console.log('Transpiler: import part:', part);
+            list.push(part);
             if (inBrackets) {
               namedExports.push(part);
             } else {
@@ -117,32 +134,35 @@ async function handleImports(code, basePath, filename) {
         transformedLines.push(line);
         continue;
       }
-      if (defaultAndNamed) {
+      if (defaultAndNamed) { 
         line = `import ${defaultAndNamed} from '${importPath}'`;
       } else if (defaultExport && namedExports.length == 0) {
         line = `import ${defaultExport} from '${importPath}'`;
       } else if (namedExports.length > 0) {
         line = `import {${namedExports.join(", ")}} from '${importPath}'`;
       } else {
-        console.log("Transpiler: ERROR: CHECK THIS OUT:", line);
+        console.log("Bundless: ERROR: CHECK THIS OUT:", line);
         continue;
       }
 
-      // ...existing import processing code...
-      const hasNoExtension = !line.includes(".");
+      // If the import doesn't have a file extension (e.g., import React from 'react')
+      const hasNoExtension = !line.includes("."); 
       if (hasNoExtension) {
+        // Check if the module is already loaded in the window object
         let alreadyLoaded = window[importParts[1]];
         if (alreadyLoaded) {
           console.log(`Transpiler: AlreadyLoaded: Window.${importParts[1]}`);
           transformedLines.push(line);
           continue;
         }
+        // Check if the module is defined in the import map
         const url = isInImportMap(importPath);
         if (url) {
+          // If found in the import map, replace the module name with the URL
           // console.log(`Transpiler: ImportMap: ${importPath} -> ${url}`);
           const newLine = line.replace(
-            new RegExp(importPath + "(?!.*" + importPath + ")"),
-            url
+        new RegExp(importPath + "(?!.*" + importPath + ")"),
+        url
           );
           transformedLines.push(newLine);
           continue;
@@ -168,20 +188,20 @@ async function handleImports(code, basePath, filename) {
 
       // Get the full path for relative imports
       const isRelativePath = importPath.startsWith(".");
-      let newBasePath = basePath;
+      let newBasePath = pathTo;
       let filename = importPath.split("/").slice(-1)[0];
       if (isRelativePath) {
-        const relBasePath = `${basePath}/${importPath
+        const relBasePath = `${pathTo}/${importPath
           .split("/")
           .slice(0, -1)
           .join("/")}`;
         importPath = `${relBasePath}/${importPath.split("/").slice(-1)}`;
         newBasePath = formatPath(relBasePath);
       }
-      console.log(
-        `%cTranspiler: Handling : ${importPath}`,
-        "background: #bada55; color: #222"
-      );
+      // console.log(
+      //   `%cTranspiler: Handling : ${importPath}`,
+      //   "background: #bada55; color: #222"
+      // );
 
       // check if .js
       const isJS = line.includes(".js");
@@ -191,11 +211,11 @@ async function handleImports(code, basePath, filename) {
         const jsCode = await response.text();
         const isJSX = line.includes(".jsx");
         if (isJSX) {
-          console.log("Transpiling JSX:", line);
+          // console.log("Transpiling JSX:", line);
           const jsxText = await handleImports(jsCode, newBasePath, filename);
           transformedLines.push(jsxText);
         } else {
-          console.log("Transpiling JS:", line);
+          // console.log("Transpiling JS:", line);
           const jsxText = await handleImports(jsCode, newBasePath, filename);
           transformedLines.push(jsxText);
         }
@@ -204,7 +224,7 @@ async function handleImports(code, basePath, filename) {
       transformedLines.push(line);
     }
   }
-  // console.log(basePath, transformedLines.join("\n"));
+  // console.log(pathTo, transformedLines.join("\n"));
 
   return transformedLines.join("\n");
 }
@@ -223,4 +243,4 @@ function isInImportMap(moduleName) {
 }
 
 
-export {handleImports}
+export {handleImports, processScripts}

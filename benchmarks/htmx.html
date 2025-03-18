@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HTMX Counter</title>
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+</head>
+<body>
+    <div id="counter">
+        <button id="increment">
+            Clicks: 0
+        </button>
+    </div>
+    <script>
+        document.getElementById('increment').addEventListener('click', function() {
+            let currentClicks = parseInt(this.innerText.split(': ')[1]);
+            this.innerText = 'Clicks: ' + (currentClicks + 1);
+        });
+    </script>
+</body>
+</html>

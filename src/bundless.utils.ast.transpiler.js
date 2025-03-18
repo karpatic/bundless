@@ -1,10 +1,3 @@
-// import "./acorn-jsx.js";
-import * as acorn from "./../rsc/acorn.min.mjs";
-import acornJsxPlugin from "./../rsc/acorn-jsx.min.mjs";
-
-console.log({ acornJsxPlugin });
- 
-
 function transformAST(ast) {
   let indent = 0;
   const spacing = "  ";
@@ -25,21 +18,39 @@ function transformAST(ast) {
       case "Program": return node.body.map(transformNode).join("\n\n");
       case "ExpressionStatement": return `${getIndent()}${transformNode(node.expression)};`;
       case "ReturnStatement": return `return ${transformNode(node.argument)};`;
-      case "ExportDefaultDeclaration": return `export default ${transformNode(node.declaration)}`;
+      case "ExportDefaultDeclaration": return `export default ${transformNode(node.declaration)};`;
       case "ImportSpecifier": return node.imported.name;
       case "ImportDefaultSpecifier": return node.local.name;
       case "ImportExpression": return `window.import(${transformNode(node.source)})`;
+      case "AssignmentExpression": return `${transformNode(node.left)} ${node.operator} ${transformNode(node.right)}`;
+      case "SpreadElement": return `...${transformNode(node.argument)}`;
+      case "LogicalExpression": return `${transformNode(node.left)} ${node.operator} ${transformNode(node.right)}`;
+      case "ChainExpression": return `${transformNode(node.expression)}`;
+      case "TemplateLiteral": 
+        return '`' + node.quasis.map((quasi, i) => {
+          const value = quasi.value.raw;
+          const expr = node.expressions[i] ? "${" + transformNode(node.expressions[i]) + "}" : "";
+          return value + expr;
+        }).join('') + '`';
       case "ImportDeclaration":
         const specifiers = node.specifiers
           .map((specifier) => transformNode(specifier))
           .filter(Boolean)
-          .join(", ");
+          .join(", "); 
         const importSource = node.source ? `'${node.source.value}'` : '';
         if (node.specifiers.some(specifier => specifier.type === 'ImportDefaultSpecifier')) {
+          // console.log('DEFAULT FOUND', specifiers);
           // Handle default import
           const defaultSpecifier = node.specifiers.find(specifier => specifier.type === 'ImportDefaultSpecifier');
-          const localName = defaultSpecifier.local.name;
-          return `import ${localName} from ${importSource}`;
+          // if not the same length then there are named imports
+          if (node.specifiers.length > 1) {
+            const namedImports = node.specifiers.filter(specifier => specifier.type === 'ImportSpecifier').map(transformNode).join(", ");
+            return `import ${defaultSpecifier.local.name}, {${namedImports}} from ${importSource}`;
+          }
+          else{
+            const localName = defaultSpecifier.local.name;
+            return `import ${localName} from ${importSource}`;
+          }  
         } else if (specifiers) {
           // Handle named imports
           return `import {${specifiers}} from ${importSource}`;
@@ -103,8 +114,12 @@ function transformAST(ast) {
         const props = node.openingElement.attributes
           .map((attr) => {
             const name = attr.name.name;
-            const value = transformNode(attr.value);
-            // Keep event handler props in camelCase
+            const value = attr.value ? transformNode(attr.value) : "true"; // Handle boolean attributes
+            // If attribute name contains a hyphen, use string notation
+            if (name.includes('-')) {
+              return `'${name}': ${value}`;
+            }
+            // Regular attribute names
             return `${name}: ${value}`;
           })
           .join(", ");
@@ -125,8 +140,26 @@ function transformAST(ast) {
       }
 
       case "JSXText":
-        const text = node.value.trim();
-        return text ? `'${text}'` : "";
+        // Don't trim multiline text to preserve formatting in pre tags
+        let text = node.value;
+        
+        // Only trim if it doesn't contain meaningful line breaks
+        if (!text.includes('\n')) {
+          text = text.trim();
+        } else {
+          // For multiline text, preserve line breaks but trim each line
+          text = text.split('\n')
+            .map(line => line.trim())
+            .join('\n')
+            .trim(); // Still trim start/end
+        }
+        
+        // Escape single quotes and handle escaping of newlines for JavaScript strings
+        const escapedText = text
+          .replace(/'/g, "\\'")
+          .replace(/\n/g, "\\n");
+          
+        return text ? `'${escapedText}'` : "";
 
       case "JSXExpressionContainer":
         return transformNode(node.expression);
@@ -194,31 +227,45 @@ function transformAST(ast) {
           node.right
         )}`;
 
-      case "MemberExpression": return `${transformNode(node.object)}.${node.property.name}`; 
+      case "MemberExpression": 
+        if (node.computed) {
+          return `${transformNode(node.object)}[${transformNode(node.property)}]`;
+        }
+        const optionalChaining = node.optional ? '?.' : '.';
+        return `${transformNode(node.object)}${optionalChaining}${node.property.name}`; 
 
       case "ArrayExpression":
         const elements = node.elements.map(transformNode).join(", ");
         return `[${elements}]`;
 
       default:
-        console.log("Unhandled node:", node.type);
+        console.log("Unhandled node:", node.type, node);
         return "";
     }
-  }
+  }  
 
-  return transformNode(ast);
+  let prefix = '';
+  let output = transformNode(ast);
+  // console.log('ast:', ast);
+  // console.log('window.Bundless.to==', window.Bundless.to) 
+  if(window.Bundless.to === 'preact'){
+    // console.log('Pre Output:', output);
+
+    prefix = `import { h, render } from 'https://esm.sh/preact@10.5.13/es2022/preact.mjs';\n`;
+    prefix += `import { useState, useEffect, useRef } from 'https://esm.sh/preact@10.5.13/es2022/hooks.mjs';\n`;
+   
+    output = output.replace(/React.createElement/g, "h");  
+    output = output.replace(/ReactDOM.render/g, "render"); 
+    output = output.replace(/React.useState/g, "useState"); 
+    output = output.replace(/React.useEffect/g, "useEffect");
+    output = output.replace(/React.useRef/g, "useRef");
+    
+    // Strip React imports as we use Preact instead
+    output = output.replace(/import React.*from ['"].*['"];?\n?/g, "");
+  } 
+  // console.log('Output:', output);
+  return `${prefix}${output}`;
+ 
 }
 
-function transformJSX(code) {
-    const acornWithJsx = acorn.Parser.extend(acornJsxPlugin()); 
-    const ast = acornWithJsx.parse(code, {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      plugins: { jsx: true },
-    }); 
-    return transformAST(ast);
-}
-window.transformJSX = transformJSX;
-  
-
-export { transformJSX };
+export { transformAST };

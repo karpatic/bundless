@@ -4,34 +4,28 @@
     <meta charset="utf-8" />
     <title>Bundless.Dev</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Acorn Parser Demo" />
+    <meta name="description" content="Acorn Parser Demo" /> 
+ 
     <script type="importmap">
       {
         "imports": {
           "react": "https://esm.sh/react@17.0.2/es2022/react.mjs",
           "react-dom": "https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs",
-          "marked": "https://esm.sh/marked@2.0.1"
+          "sucrase": "https://cdn.jsdelivr.net/npm/sucrase@3.35.0/+esm"
         }
       }
     </script>
     <script src="https://esm.sh/react@17.0.2/es2022/react.mjs" type="module"></script>
-    <script src="https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs" type="module"></script>
-    <script src="/dist/bundless.acorn.min.js"></script>
+    <script src="https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs" type="module"></script> 
   </head>
   <body>
-    <h1>Bundless Demo</h1>
-
-    <h2>More Examples:</h2>
-    <ul> 
-      <li><a href="/tests/baseline_a.html">Acorn Speed Test</a></li>
-      <li><a href="/tests/demo_a.html">Acorn Parser</a></li>
-      <li><a href="/tests/demo_b.html">Babel Parser</a></li>
-    </ul>
+    <h1>Sucrase Demo</h1> 
 
     <h2>Input Code</h2> 
     <textarea id="jsx-code" rows="12" cols="90">
 import React from 'react';
 import ReactDOM from 'react-dom';
+
 
 const App = () => {
   return (
@@ -49,12 +43,22 @@ ReactDOM.render(<App />, document.getElementById('react-root'));
     <h2>Output In Iframe</h2>
     <iframe id="output-frame" style="width: 100%; height: 300px"></iframe>
 
-    <script> 
+    <script type="module">   
+      import * as sucrase from 'sucrase';
+
+      window.transpileCode = async (code) => { 
+        const { code: transpiledCode } = sucrase.transform(code, {
+          transforms: ['jsx']
+        });  
+        return transpiledCode;
+      };
+
       document.getElementById("run-jsx").addEventListener("click", async () => {
- 
+        console.log("Transpile button clicked");
         // Transpile
         const jsxCode = document.getElementById("jsx-code").value;
-        const transpiledCode = await window.transpileCode(jsxCode, "./", false);
+        console.log("JSX Code:", jsxCode);
+        const transpiledCode = await window.transpileCode(jsxCode);
         document.getElementById("transpiled-code").value = transpiledCode;
 
         // Create the Iframe
@@ -70,6 +74,7 @@ ReactDOM.render(<App />, document.getElementById('react-root'));
         doc.body.appendChild(script); 
         const iframe = document.getElementById("output-frame");
         iframe.srcdoc = doc.documentElement.outerHTML;
+        console.log("Iframe updated with transpiled code");
       });
     </script>
   </body>
