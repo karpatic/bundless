@@ -1,19 +1,19 @@
 # Build more, bundle less. 
 
-Create react apps using only a file server.
+Create react apps with only a file server.
 
 **Bundless.js**: A 35kb browser shim to resolve and tanspile JSX dependencies at runtime
 
 ## Usage  
 
-Bundless processes all `type='text/jsx'` and `text/babel` tags onDomLoad
+Bundless processes all `type='text/jsx'` and `'text/babel'` tags onDomLoad
 
-<a href="/dist/bundless.babel.min.js" target="_blank"><strong>Development</strong></a>: 500Kb | no caching | source-maps.
+<strong>Development</strong> <a href="/dist/bundless.babel.min.js" target="_blank">link</a>: 500Kb | no caching | source-maps.
 ```
 </script src="./bundless.babel.min.js"> 
 ``` 
 
-<a href="/dist/bundless.acorn.min.js" target="_blank"><strong>Production</strong></a>: 35Kb | caching | no source-maps.
+<strong>Production</strong> <a href="/dist/bundless.acorn.min.js" target="_blank">link</a>: 35Kb | caching | no source-maps.
 ```
 </script src="./bundless.acorn.min.js"> 
 ``` 
