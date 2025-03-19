@@ -132,6 +132,9 @@ const BundlingBenchmarks = () => {
 
   return (
     <div> 
+      <div style={{ marginBottom: '20px' }}>
+        <a href="../" className="text-decoration-none">← Back to Home</a>
+      </div>
       <h1>Bundless Benchmarks</h1> 
       <p>Below is the time it took your device to load a 'Hello World' app using a variety of build tools and libraries.</p> 
       <p>For Reference: "<b style={{display:'inline'}}>B.Acorn + Preact</b>" stands for "Bundless.Acorn (transpiling React code for use) with Preact ". <br/>  
