@@ -159,6 +159,7 @@ const BundlingBenchmarks = () => {
             <th onClick={() => handleSort('ts')} style={{ cursor: 'pointer' }}>
               TS {sortField === 'ts' && (sortDirection === 'asc' ? '▲' : '▼')}
             </th>
+            <th>More Information</th>
           </tr>
         </thead>
         <tbody>
@@ -168,7 +169,6 @@ const BundlingBenchmarks = () => {
               style={item.highlight ? { backgroundColor: '#fffbea' } : {}}
             >
               <td>
-                <a href="#" onClick={(e) => handleChainClick(e, item.url)} className="me-2 text-decoration-none">🔗</a>
                 {item.name}
                 <div className="small text-muted">{item.caption}</div>
               </td>
@@ -216,6 +216,9 @@ const BundlingBenchmarks = () => {
               </td>
               <td className="text-center">{item.jsx ? '✔️' : '❌'}</td>
               <td className="text-center">{item.ts ? '✔️' : '❌'}</td>
+              <td className="text-center">
+                <a href="#" onClick={(e) => handleChainClick(e, item.url)} className="text-decoration-none">Show</a>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -260,12 +263,6 @@ const BundlingBenchmarks = () => {
               <h3>Preview: {selectedUrl.split('/').pop().replace('.html','')}</h3>
               <div>
                 <button 
-                  className="btn btn-primary me-2" 
-                  onClick={() => window.open(selectedUrl, '_blank')}
-                >
-                  Open in New Tab
-                </button>
-                <button 
                   className="btn btn-secondary" 
                   onClick={() => setPopupOpen(false)}
                 >
@@ -281,6 +278,18 @@ const BundlingBenchmarks = () => {
               backgroundColor: '#f8f9fa'
             }}>
               <pre style={{whiteSpace: 'pre-wrap'}}>{htmlContent}</pre>
+            </div>
+            <div style={{
+              marginTop: '15px',
+              display: 'flex',
+              justifyContent: 'center'
+            }}>
+              <button 
+                className="btn btn-primary" 
+                onClick={() => window.open(selectedUrl, '_blank')}
+              >
+                Open in New Tab
+              </button>
             </div>
           </div>
         </div>

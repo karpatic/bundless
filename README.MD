@@ -21,7 +21,7 @@ Bundless processes all `type='text/jsx'` and `'text/babel'` tags onDomLoad
 
 That's all there is to it! 
 
-- Add ` to="preact"` if you want your react code transpiled for use with a preact cdn.
+- Add `to="preact"` if you want your react code transpiled to preact.
 - This page was made with Bundless - [Try it out](./tests/index.html) - [Examples](./tests/index.html)- [Benchmarks](./benchmarks/index.html)
  
 ### How it works
@@ -52,6 +52,6 @@ Developers often explore Preact to bypass React bundling, but find using htm() i
 If you use preact/compat, most React code works, but be mindful: 
 👉 Preact Portals require a DOM element
 👉 Preact Context API consumers need a provider.
-👉 Preact Uses `e.target.value` instead of `e.currentTarget.value`   
+👉 Preact Uses `e.target.value` instead of `e.currentTarget.value`
 👉 Preact Uses `inputRef.focus()` instead of `inputRef.current.focus()`
-👉 Preact Uses  `e.currentTarget.value` instead of `e.target.value`  
+👉 Preact Uses  `e.currentTarget.value` instead of `e.target.value`

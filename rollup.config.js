@@ -13,7 +13,7 @@ export default [
         },
         plugins: [
             replace({
-                'rollup.prod': JSON.stringify(false),
+                'window.Bundless.prod': JSON.stringify(false),
                 preventAssignment: true
             }),
             gzipPlugin({
@@ -33,7 +33,7 @@ export default [
         },
         plugins: [
             replace({
-                'rollup.prod': JSON.stringify(true),
+                'window.Bundless.prod': JSON.stringify(true),
                 preventAssignment: true
             }),
             gzipPlugin({
@@ -53,7 +53,7 @@ export default [
         },
         plugins: [
             replace({
-                'rollup.prod': JSON.stringify(false),
+                'window.Bundless.prod': JSON.stringify(false),
                 preventAssignment: true
             }),
             gzipPlugin({
@@ -73,7 +73,7 @@ export default [
         },
         plugins: [
             replace({
-                'rollup.prod': JSON.stringify(true),
+                'window.Bundless.prod': JSON.stringify(true),
                 preventAssignment: true
             }),
             gzipPlugin({
