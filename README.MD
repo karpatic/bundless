@@ -2,25 +2,27 @@
 
 Create react apps with only a file server.
 
-**Bundless.js**: A 35kb browser shim to resolve and tanspile JSX dependencies at runtime
+**Bundless.js**: A 35kb browser shim that resolves and tanspiles JSX dependencies at runtime
 
 ## Usage  
 
 Bundless processes all `type='text/jsx'` and `'text/babel'` tags onDomLoad
 
-<strong>Development</strong> <a href="/dist/bundless.babel.min.js" target="_blank">link</a>: 500Kb | no caching | source-maps.
+<strong>Development</strong> <a href="/dist/bundless.sucrose.min.js" target="_blank">link</a>: 50Kb | no caching | source-maps. 
+
 ```
 </script src="./bundless.babel.min.js"> 
 ``` 
 
-<strong>Production</strong> <a href="/dist/bundless.acorn.min.js" target="_blank">link</a>: 35Kb | caching | no source-maps.
+<strong>Production</strong> <a href="/dist/bundless.acorn.prod.js" target="_blank">link</a>: 35Kb | caching | no source-maps.
 ```
-</script src="./bundless.acorn.min.js"> 
+</script src="./bundless.acorn.prod.js"> 
 ``` 
 
 That's all there is to it! 
 
-- This page was made with Bundless - [Try it out](./tests/index.html) - [Examples](./tests/index.html)
+- Add ` to="preact"` if you want your react code transpiled for use with a preact cdn.
+- This page was made with Bundless - [Try it out](./tests/index.html) - [Examples](./tests/index.html)- [Benchmarks](./benchmarks/index.html)
  
 ### How it works
 
@@ -38,17 +40,13 @@ That's all there is to it!
 
 <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
     <img src="/memes/meme_what_gives_peope_feelings_of_power.jpg" style="width:300px;" /> 
-    <img src="/memes/meme_did_you_just_take_both_pills.jpeg" style="width:300px;" />  
-    <img src="/memes/meme_running_away_ballon.jpg" style="width:300px;" /> 
-    <img src="/memes/meme_anime_girl_hiding_from_terminator.jpg" style="width:300px;" /> 
+    <img src="/memes/meme_did_you_just_take_both_pills.jpeg" style="width:300px;" /> 
     <img src="/memes/meme_goose_chase.jpg" style="width:300px;" /> 
     <img src="/memes/meme_left_exit_12_off_ramp.jpg" style="width:300px;" />  
 </div>
 
-## Why Don't more people develop with Preact client-side?
-My  best guess is that the subtle differences in notation between Preact and React are the major constraint. The second major issue is that Preact and htm() use String Template Literals rather than JSX which most parsers and linters do not natively interperet for syntax highlighting.
-
-It is possible to improve VS Code Intelisense to support Preact JSX. The problem is that VS Code assumes JSX = React, so intelisense doesnt catch Preact-specifics like h(). Typescript users beware, React’s TS definitions (@types/react) are officially supported but not @types/preact
+## Why don't more people develop with Preact?
+Developers often explore Preact to bypass React bundling, but find using htm() isn't great, and lacks proper tooling and support (such as syntax highlighting and IntelliSense).
 
 ## Functional React V Preact/Compat   
 If you use preact/compat, most React code works, but be mindful: 

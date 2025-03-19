@@ -20,15 +20,15 @@ async function processScripts(scriptTags) {
       pathTo += "/";
     }
 
-    // console.log('processScripts: transpileCode:', {pathTo, filename});
-    const transpiledCode = await window.transpileCode(jsxCode, pathTo, filename);
+    console.log('processScripts: transpileCode:', {pathTo, filename});
+    const transpiledCode = await window.Bundless.transpileCode(jsxCode, pathTo, filename);
     insertScript(transpiledCode);
   }
 } 
 
 let dynamicImportList = false;
 window.import = async function (path) {
-  // console.log("~~~~ window.import: ", path);
+  console.log("~~~~ window.import: ", path);
   dynamicImportList = [];
   let basePath = path.split("/").slice(0, -1).join("/");
   // console.log("~~~~ basePath: ", basePath);
@@ -39,7 +39,7 @@ window.import = async function (path) {
   }
   const code = await response.text();
   // console.log("~~~~ code: ", code);
-  const transpiledCode = await window.transpileCode(code, basePath);
+  const transpiledCode = await window.Bundless.transpileCode(code, basePath);
   const blob = new Blob([transpiledCode], { type: "application/javascript" });
   const url = URL.createObjectURL(blob);
   // console.log("~~~~ blob URL: ", url);
@@ -70,8 +70,8 @@ async function handleImports(code, pathTo, filename) {
   const transformedLines = [];
 
   for (let line of lines) {
-    if (line.includes("import")) {
-      // Skip comments
+    let flag = line.trim().startsWith("import") || line.includes("import(")
+    if ( flag ) { 
       const commentedOut = line.trim().startsWith("//");
       if (commentedOut) {
         transformedLines.push(line);
@@ -242,5 +242,23 @@ function isInImportMap(moduleName) {
   }
 }
 
+function toPreact(code){
+  if(window.Bundless.to === 'preact'){
+    let prefix;
+    prefix = `import { h, render } from 'https://esm.sh/preact@10.5.13/es2022/preact.mjs';\n`;
+    prefix += `import { useState, useEffect, useRef, useMemo } from 'https://esm.sh/preact@10.5.13/es2022/hooks.mjs';\n`; 
+    code = code.replace(/React.createElement/g, "h");  
+    code = code.replace(/ReactDOM.render/g, "render"); 
+    code = code.replace(/React.useState/g, "useState"); 
+    code = code.replace(/React.useEffect/g, "useEffect");
+    code = code.replace(/React.useRef/g, "useRef");
+    code = code.replace(/React.useMemo/g, "useMemo");
+    code = code.replace(/React.Fragment/g, "");
+    
+    code = code.replace(/import React.*from ['"].*['"];?\n?/g, "");
+    code = prefix + code;
+  } 
+  return code;
+}
 
-export {handleImports, processScripts}
+export {handleImports, processScripts, toPreact};

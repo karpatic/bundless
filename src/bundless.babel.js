@@ -3,7 +3,6 @@ import { handleImports, processScripts } from './bundless.utils.js'
 
 
 
-
 function transformJSX(code, filePath) {
   // console.log('transformJSX:', filePath );
   const result = Babel.transform(code, { 
@@ -17,7 +16,7 @@ function transformJSX(code, filePath) {
   map.file = 'input.js';
   delete map.sourcesContent;
   // delete map.sourceRoot;
-  // console.log('transformJSX:', map); 
+  console.log('transformJSX:', map); 
   const sourceMapComment = `//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(map))}`; 
   return `${transpiledCode}\n${sourceMapComment}`;
 }
@@ -27,9 +26,7 @@ async function transpileCode(code, pathTo, filename) {
   // console.log('transpileCode:', {pathTo, filename});
   const transpiledCode = transformJSX(processedCode, pathTo + filename);   
   return transpiledCode;
-}
-
-window.transpileCode = transpileCode; 
+} 
 
 document.addEventListener("DOMContentLoaded", async () => {
   let scriptTag = document.querySelector('script[src*="bundless.babel"]'); 
@@ -56,3 +53,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.head.appendChild(babelScript);
   } 
 });
+
+window.Bundless = { 
+  transpileCode,
+  to: 'preact',
+  prod: false,
+};

@@ -1,8 +1,13 @@
-import { handleImports, processScripts } from './bundless.utils.js'
+import { handleImports, processScripts, toPreact } from './bundless.utils.js'
 import * as sucrase from './../rsc/sucrase/sucrase.esm.js'; 
 
 
 
+window.Bundless = { 
+  transpileCode,
+  to: 'preact',
+  prod: false,
+};
 
 function transformJSX(code, filePath) {
   // console.log('transformJSX:', {code, filePath});
@@ -15,9 +20,14 @@ function transformJSX(code, filePath) {
 
 
   
-  const { code: transpiledCode, sourceMap } = result;   
+  let { code: transpiledCode, sourceMap } = result;   
   
   const sourceMapComment = `//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(sourceMap))}`;
+
+  if(window.Bundless.to === 'preact'){  
+    transpiledCode = toPreact(transpiledCode);
+  }
+
   // console.log('transformJSX:', {sourceMap});
   return `${transpiledCode}\n${sourceMapComment}`;
 }
@@ -27,9 +37,7 @@ async function transpileCode(code, basePath, filename) {
   // console.log('transpileCode:', {basePath, filename});
   const transpiledCode = transformJSX(processedCode, basePath + filename);   
   return transpiledCode;
-}
-
-window.transpileCode = transpileCode;  
+} 
 
 document.addEventListener("DOMContentLoaded", async () => {
   let scriptTag = document.querySelector('script[src*="bundless.sucrase"]'); 
@@ -47,4 +55,5 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   processScripts(scriptTags);
 });
+ 
  

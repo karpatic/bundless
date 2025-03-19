@@ -5,7 +5,7 @@ module.exports = (env, argv) => {
   
   return {
     mode: isProduction ? 'production' : 'development',
-    entry: './tests/react/App.jsx',
+    entry: './../tests/react/App.jsx',
     output: {
       path: path.resolve(__dirname, 'benchmarks'),
       filename: 'react.js', 
