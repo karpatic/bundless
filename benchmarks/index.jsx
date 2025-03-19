@@ -14,25 +14,28 @@ const BundlingBenchmarks = () => {
   const [sortDirection, setSortDirection] = useState('asc');
 
   const examples = [
-    { highlight: true, name: "B.Acorn + Preact", url: "./../tests/acorn_preact.html", size: '40', caption:'', jsx: true, ts: false, recommended: true },
-    { name: "B.Meriyah + Preact", url: "./../tests/meriyah_preact.html", size: '45', caption:'', jsx: true, ts: false, recommended: true },
-    { name: "B.Babel + React", url: "./../tests/babel.html", size: '500', caption:'Parses ECMA (ES3) and up. Expansive ecosystem.', jsx: true, ts: true },
-    { name: "B.Meriyah + React", url: "./../tests/meriyah.html", size: '80', caption:'', jsx: true, ts: false, recommended: true }, 
-    { name: "B.Acorn + React", url: "./../tests/acorn.html", size: '75', caption:'Parses ECMA 2015 (ES6) and up. Used by Babel, ESLint, Prettier, Webpack, Rollup', jsx: true, ts: false },
-    { name: "B.Sucrase + React", url: "./../tests/sucrase.html", size: '90', caption:'Parses ECMA 2015 (ES6) and up. A simplified Babel fork.', jsx: true, ts: true, recommended: true }, 
-    { highlight: true, name: "B.Sucrase + Preact", url: "./../tests/sucrase_preact.html", size: '50', caption:'Parses ECMA 2015 (ES6) and up. A simplified Babel fork.', jsx: true, ts: true, recommended: true }, 
-    { name: "HTML Inline", url: "./../benchmarks/html.html", size: '1', caption:'', jsx: false, ts: false },
-    { name: "Script Inline ", url: "./../benchmarks/vanilla.html", size: '1', caption:'', jsx: false, ts: false },
-    { name: "Script Src ", url: "./../benchmarks/vanilla_src.html", size: '1', caption:'', jsx: false, ts: false },
-    { name: "Module Inline", url: "./../benchmarks/module.html", size: '1', caption:'', jsx: false, ts: false },
-    { name: "Module Src", url: "./../benchmarks/module_src.html", size: '1', caption:'', jsx: false, ts: false },
-    { name: "Module Import", url: "./../benchmarks/module_import.html", size: '1', caption:'', jsx: false, ts: false },
-    { name: "Webpack + React", url: "./../benchmarks/react.html", size: '40', caption:'Bundled with Babel', jsx: true, ts: true },
-    { name: "Vite + React", url: "./../benchmarks/vite.html", size: '46', caption:'Bundled with ESBuild', jsx: true, ts: true },
-    { name: "CDN + HTMX", url: "./../benchmarks/htmx.html", size: '20', caption:'', jsx: false, ts: false },
-    { highlight: true, name: "CDN + Preact", url: "preact.html", size: '6', caption:'', jsx: false, ts: false },
+    { name: "HTML Inline", url: "./html.html", size: '1', caption:'', jsx: false, ts: false },
+    { name: "Script Inline ", url: "./vanilla.html", size: '1', caption:'', jsx: false, ts: false },
+    { name: "Script Src ", url: "./vanilla_src.html", size: '1', caption:'', jsx: false, ts: false },
+    { name: "Module Inline", url: "./module.html", size: '1', caption:'', jsx: false, ts: false },
+    { name: "Module Src", url: "./module_src.html", size: '1', caption:'', jsx: false, ts: false },
+    { name: "Module Import", url: "./module_import.html", size: '1', caption:'', jsx: false, ts: false },
+    
+    { name: "Webpack + React", url: "./react.html", size: '40', caption:'Bundled with Babel', jsx: true, ts: true, highlight: '#f8f9fa' },
+    { name: "Vite + React", url: "./vite.html", size: '46', caption:'Bundled with ESBuild', jsx: true, ts: true },
+
+    { name: "CDN + HTMX", url: "./../benchmarks/htmx.html", size: '20', caption:'', jsx: false, ts: false },    
+    { name: "CDN + Preact", url: "preact.html", size: '6', caption:'', jsx: false, ts: false, highlight: '#f8f9fa' },
     { name: "CDN + JQuery", url: "jquery.html", size: '32', caption:'', jsx: false, ts: false },
     { name: "CDN + React", url: "babel.html", size: '500', caption:'Using Babel-Standalone', jsx: false, ts: false },
+
+    { name: "B.Acorn + Preact", url: "./../examples/acorn_preact.html", size: '40', caption:'', jsx: true, ts: false, recommended: true, highlight: '#fffbea' },
+    { name: "B.Meriyah + Preact", url: "./../examples/meriyah_preact.html", size: '45', caption:'', jsx: true, ts: false, recommended: true },
+    { name: "B.Babel + React", url: "./../examples/babel.html", size: '500', caption:'Parses ECMA (ES3) and up. Expansive ecosystem.', jsx: true, ts: true },
+    { name: "B.Meriyah + React", url: "./../examples/meriyah.html", size: '80', caption:'', jsx: true, ts: false, recommended: true }, 
+    { name: "B.Acorn + React", url: "./../examples/acorn.html", size: '75', caption:'Parses ECMA 2015 (ES6) and up. Used by Babel, ESLint, Prettier, Webpack, Rollup', jsx: true, ts: false },
+    { name: "B.Sucrase + React", url: "./../examples/sucrase.html", size: '90', caption:'Parses ECMA 2015 (ES6) and up. A simplified Babel fork.', jsx: true, ts: true, recommended: true }, 
+    { name: "B.Sucrase + Preact", url: "./../examples/sucrase_preact.html", size: '50', caption:'Parses ECMA 2015 (ES6) and up. A simplified Babel fork.', jsx: true, ts: true, recommended: true, highlight: '#fffbea' }, 
   ];
 
   useEffect(() => {  
@@ -133,9 +136,11 @@ const BundlingBenchmarks = () => {
   return (
     <div> 
       <div style={{ marginBottom: '20px' }}>
-        <a href="../" className="text-decoration-none">← Back to Home</a>
+      <a href="../" className="text-decoration-none">← Back to Home</a>
+      <a href="../examples/playground.html" className="text-decoration-none">← Try it out</a>
+      <a href="../examples/index.html" className="text-decoration-none">← Examples</a>
       </div>
-      <h1>Bundless Benchmarks</h1> 
+      <h1>Bundless Benchmarks</h1>  
       <p>Below is the time it took your device to load a 'Hello World' app using a variety of build tools and libraries.</p> 
       <p>For Reference: "<b style={{display:'inline'}}>B.Acorn + Preact</b>" stands for "Bundless.Acorn (transpiling React code for use) with Preact ". <br/>  
       </p> 
@@ -166,7 +171,7 @@ const BundlingBenchmarks = () => {
           {tableData.map((item, index) => (
             <tr 
               key={index} 
-              style={item.highlight ? { backgroundColor: '#fffbea' } : {}}
+              style={item.highlight ? { backgroundColor: item.highlight } : {}}
             >
               <td>
                 {item.name}

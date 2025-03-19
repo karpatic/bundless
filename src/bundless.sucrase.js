@@ -5,7 +5,7 @@ import * as sucrase from './../rsc/sucrase/sucrase.esm.js';
 
 window.Bundless = { 
   transpileCode,
-  to: 'preact',
+  to: 'react',
   prod: false,
 };
 

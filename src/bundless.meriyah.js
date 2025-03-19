@@ -7,7 +7,7 @@ import { transformAST } from './bundless.utils.ast.transpiler.js';
 window.Bundless = {
   transformAST,
   transpileCode,
-  to: 'preact',
+  to: 'react',
   prod: false, 
 }; 
 

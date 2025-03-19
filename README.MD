@@ -8,21 +8,21 @@ Create react apps with only a file server.
 
 Bundless processes all `type='text/jsx'` and `'text/babel'` tags onDomLoad
 
-<strong>Development</strong> <a href="/dist/bundless.sucrose.min.js" target="_blank">link</a>: 50Kb | no caching | source-maps. 
+<strong>JSX & Typescript</strong> <a href="/dist/bundless.sucrose.min.js" target="_blank">link</a>: 52Kb |  source-maps. 
 
 ```
-</script src="./bundless.babel.min.js"> 
+</script src="./bundless.sucrase.min.js"> 
 ``` 
 
-<strong>Production</strong> <a href="/dist/bundless.acorn.prod.js" target="_blank">link</a>: 35Kb | caching | no source-maps.
+<strong>JSX Only</strong> <a href="/dist/bundless.acorn.min.js" target="_blank">link</a>: 36Kb | no source-maps.
 ```
-</script src="./bundless.acorn.prod.js"> 
+</script src="./bundless.acorn.min.js"> 
 ``` 
 
 That's all there is to it! 
 
 - Add `to="preact"` if you want your react code transpiled to preact.
-- This page was made with Bundless - [Try it out](./tests/index.html) - [Examples](./tests/index.html)- [Benchmarks](./benchmarks/index.html)
+- This page was made with Bundless - [Try it out](./examples/playground.html) - [Examples](./examples/index.html)- [Benchmarks](./benchmarks/index.html)
  
 ### How it works
 

@@ -1,18 +1,17 @@
-console.log('App.js Loaded');  
-
 import React from 'react'; 
 import ReactDOM from 'react-dom'; 
+import Child from './Child.jsx';
 
 function App() { 
-  let [TextComponent, setTextComponent] = useState(false);
+  let [TextComponent, setTextComponent] = React.useState(false);
   let [text, setText] = React.useState('');
   let [number, setNumber] = React.useState(0);
  
   React.useEffect(async () => { 
     setTimeout(async () => {
-      let module = await window.import('/tests/acorn/TextInput.jsx');   
+      let module = await window.import('/test/components/TextInput.jsx');   
       setTextComponent(() => module.default);
-    }, 500);
+    }, 2000);
   }, []);  
   const incrementNumber = () => {
     setNumber(number + 1);
@@ -21,7 +20,8 @@ function App() {
   if(TextComponent){
     return (
       <div style={{ padding: '20px' }}>
-        <h1>Meriyah Dynamic Import Works Too!</h1> 
+        <h1>Bundless Dynamic Imports Work Too!</h1> 
+        <Child text={text}/>
         {<TextComponent text={text} onChange={setText} /> }
       </div>
     );
@@ -29,7 +29,7 @@ function App() {
 
   return (
     <div>
-      Bundless Meriyah Works...
+      Bundless Works...
     <p>Number: {number}</p>
     <button onClick={incrementNumber}>Increment</button>
   </div>

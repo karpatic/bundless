@@ -30,9 +30,26 @@
    
   <!-- bundless -->
   <!-- <script src="./../src/bundless.acorn.js" type="module" to="preact"></script>    -->
-  <script src="./../dist/bundless.acorn.prod.js" type="module" to="preact"></script>  
+  <script src="./../dist/bundless.acorn.min.js" type="module" to="preact"></script>  
 
   <!-- App -->
   <script src="./index.jsx" type="text/jsx"></script> 
 </body>
 </html>
+
+<style>
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+thead  {
+  position: sticky;
+  top: 0;
+  background-color: #f8f9fa;
+} 
+</style>

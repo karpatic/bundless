@@ -535,7 +535,7 @@ function transformAST(ast, debug = {}) {
 window.Bundless = {
   transformAST,
   transpileCode,
-  to: 'preact',
+  to: 'react',
   prod: false, 
 }; 
 
@@ -558,7 +558,7 @@ async function transformJSX(code, filePath) {
   });
 
   // Update source mapper settings for this specific file 
-  if (!window.Bundless.prod) { 
+  { 
 
     const loadSourceMapTools = async () => {
       console.log('Loading Sucrase');
@@ -590,10 +590,7 @@ async function transformJSX(code, filePath) {
   if(window.Bundless.to === 'preact'){  
     transpiledCode = toPreact(transpiledCode);
   }
-  if(window.Bundless.prod){
-    return transpiledCode 
-  }
-  else {
+  {
     console.log('transformJSX:',  'map', result.map); 
     const sourceMapComment = `//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(map))}`; 
     return `${transpiledCode}\n${sourceMapComment}`; 

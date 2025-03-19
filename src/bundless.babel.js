@@ -3,6 +3,13 @@ import { handleImports, processScripts } from './bundless.utils.js'
 
 
 
+
+window.Bundless = { 
+  transpileCode,
+  to: 'react',
+  prod: false,
+};
+
 function transformJSX(code, filePath) {
   // console.log('transformJSX:', filePath );
   const result = Babel.transform(code, { 
@@ -53,9 +60,3 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.head.appendChild(babelScript);
   } 
 });
-
-window.Bundless = { 
-  transpileCode,
-  to: 'preact',
-  prod: false,
-};

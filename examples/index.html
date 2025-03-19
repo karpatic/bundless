@@ -16,61 +16,73 @@
     </script>
     <script src="https://esm.sh/react@17.0.2/es2022/react.mjs" type="module"></script>
     <script src="https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs" type="module"></script>
-    <script src="/dist/bundless.acorn.min.js"></script>
+    <script src="/dist/bundless.sucrase.min.js"></script>
   </head>
   <body>
-    <h1>Bundless Demo</h1>
+    <h1>Bundless Examples</h1>
+    Examples listed here are used in the benchmarks.  
+    <h2>Site links:</h2>
+    <ul>
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/benchmarks/index.html">Benchmarks</a></li>
+      <li><a href="./playground.html">Try it out</a></li>
+    </ul> 
 
-    <h2>More Examples:</h2>
+    <h2>React and Preact Transpilation</h2>
+    <p>
+      The examples on this site demonstrate React code that gets transpiled at runtime to either ES6-compatible React or Preact code using different versions of the Bundless "<code>src=bundless.PARSERNAME.[min||dev].js</script></code>". 
+      To use Preact instead of React, include the attribute <code>to="preact"</code> in the script tag. This allows you to switch between 
+      React and Preact seamlessly, depending on your requirements. No changes to your codebase are required to transition to a bundler.
+    </p>
+
+    <h2>Available Parsers</h2>
+    <p>
+      There are four different parsers available in these examples. Each parser has its own strengths and weaknesses, as outlined in the table below:
+    </p>
+
+    <table border="1">
+      <thead>
+        <tr>
+          <th>Parser</th>
+          <th>Pros</th>
+          <th>Cons</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Acorn</td>
+          <td>Lightweight, fast, and highly modular.</td>
+          <td>Limited support for advanced syntax features.</td>
+        </tr>
+        <tr>
+          <td>Babel</td>
+          <td>Comprehensive syntax support and ecosystem integration.</td>
+          <td>Slower performance compared to other parsers.</td>
+        </tr>
+        <tr>
+          <td>Meriyah</td>
+          <td>Fast and ES2020-compliant.</td>
+          <td>Smaller community and fewer plugins.</td>
+        </tr>
+        <tr>
+          <td>Sucrase</td>
+          <td>Optimized for development with fast transpilation.</td>
+          <td>Not a full parser; limited to specific transformations.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Examples:</h2>
     <ul> 
-      <li><a href="/examples/acorn_baseline.html">Acorn Speed Test</a></li>
-      <li><a href="/examples/acorn.html">Acorn Parser</a></li>
-      <li><a href="/examples/babel.html">Babel Parser</a></li>
+      <li><a href="/examples/acorn_speed_test.html">Acorn Speed Test</a></li>
+      <li><a href="/examples/acorn.html">Acorn + React</a></li>
+      <li><a href="/examples/babel.html">Babel  React</a></li>
+      <li><a href="/examples/acorn debug.html">Acorn Debug + React</a></li>
+      <li><a href="/examples/acorn_preact.html">Acorn Preact</a></li>
+      <li><a href="/examples/meriyah.html">Meriyah + React</a></li>
+      <li><a href="/examples/meriyah_preact.html">Meriyah + Preact</a></li>
+      <li><a href="/examples/sucrase.html">Sucrase + React</a></li>
+      <li><a href="/examples/sucrase_preact.html">Sucrase + Preact</a></li>
     </ul>
-
-    <h2>Input Code</h2> 
-    <textarea id="jsx-code" rows="12" cols="90">
-import React from 'react';
-import ReactDOM from 'react-dom';
-
-const App = () => {
-  return (
-    <h1>Hello, World!</h1>
-  );
-};
-
-ReactDOM.render(<App />, document.getElementById('react-root'));
-    </textarea> 
-    <button id="run-jsx">Transpile JSX</button>
-
-    <h2>Transpiled Code</h2>
-    <textarea id="transpiled-code" rows="12" cols="90" readonly></textarea>
-
-    <h2>Output In Iframe</h2>
-    <iframe id="output-frame" style="width: 100%; height: 300px"></iframe>
-
-    <script> 
-      document.getElementById("run-jsx").addEventListener("click", async () => {
- 
-        // Transpile
-        const jsxCode = document.getElementById("jsx-code").value;
-        const transpiledCode = await window.transpileCode(jsxCode, "./", false);
-        document.getElementById("transpiled-code").value = transpiledCode;
-
-        // Create the Iframe
-        const html = document.documentElement.cloneNode(true).outerHTML;
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, "text/html");
-        doc.body.innerHTML = '<div id="react-root"></div>'; 
-
-        // Insert
-        const script = document.createElement("script");
-        script.type = "module";
-        script.textContent = transpiledCode;
-        doc.body.appendChild(script); 
-        const iframe = document.getElementById("output-frame");
-        iframe.srcdoc = doc.documentElement.outerHTML;
-      });
-    </script>
   </body>
 </html>

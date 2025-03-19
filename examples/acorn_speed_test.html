@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Acorn Preact Demo</title> 
+  <title>Acorn Speed Test</title> 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Acorn Preact Demo"> 
 </head> 
@@ -15,10 +15,23 @@
       } 
     }
   </script> 
-  <div id="react-root"></div>  
+  <div id="react-root"></div> 
   <script src="https://esm.sh/preact@10.5.13/es2022/preact.mjs" type="module"></script>
   <script src="https://esm.sh/preact@10.5.13/es2022/hooks.mjs" type="module"></script> 
-  <script src="/dist/bundless.acorn.min.js" type="module" to="preact"></script>  
-  <script src="/test/components/App.jsx" type="text/jsx"></script> 
+  <script src="./../dist/bundless.acorn.min.js" to="preact"></script>  
+  <script type="text/babel">
+    import React from 'react';
+    import ReactDOM from 'react-dom';
+    function App(){
+        return ( 
+            <div>
+                <h1>Hello World</h1>
+                This is a baseline acorn file.
+            </div>
+        );
+    
+    }
+    ReactDOM.render(<App />, document.getElementById('react-root'));
+  </script> 
 </body>
-</html>
+</html> 

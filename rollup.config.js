@@ -28,7 +28,7 @@ export default [
         input: './src/bundless.acorn.js',
         output: {
             dir: './dist',
-            entryFileNames: 'bundless.acorn.prod.js',
+            entryFileNames: 'bundless.acorn.min.js',
             format: 'esm',
         },
         plugins: [
@@ -68,7 +68,7 @@ export default [
         input: './src/bundless.meriyah.js',
         output: {
             dir: './dist',
-            entryFileNames: 'bundless.meriyah.prod.js',
+            entryFileNames: 'bundless.meriyah.min.js',
             format: 'esm',
         },
         plugins: [

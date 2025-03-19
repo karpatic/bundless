@@ -7,7 +7,7 @@ import { handleImports, processScripts, toPreact } from './bundless.utils.js'
 window.Bundless = {
   transformAST,
   transpileCode,
-  to: 'preact',
+  to: 'react',
   prod: false, 
 }; 
 
