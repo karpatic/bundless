@@ -1,5 +1,3 @@
-console.log('Child.jsx Loaded');  
-
 import React from 'react';
 
 export default function Child({ text }) {

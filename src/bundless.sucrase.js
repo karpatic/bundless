@@ -24,7 +24,7 @@ function transformJSX(code, filePath) {
   
   const sourceMapComment = `//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(sourceMap))}`;
 
-  if(window.Bundless.to === 'preact'){  
+  if(window.Bundless.to == 'preact'){  
     transpiledCode = toPreact(transpiledCode);
   }
 
@@ -46,6 +46,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.warn('bundless not found.');
     return;
   } 
+  
+  const attrs = scriptTag.attributes; 
+  if (attrs.to) {
+    window.Bundless.to = attrs.to.value
+  }
 
   const scriptTags = document.querySelectorAll("script[type='text/jsx'], script[type='text/babel']"); 
   if (scriptTags.length === 0) {

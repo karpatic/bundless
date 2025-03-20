@@ -136,9 +136,9 @@ const BundlingBenchmarks = () => {
   return (
     <div> 
       <div style={{ marginBottom: '20px' }}>
-      <a href="../" className="text-decoration-none">← Back to Home</a>
-      <a href="../examples/playground.html" className="text-decoration-none">← Try it out</a>
-      <a href="../examples/index.html" className="text-decoration-none">← Examples</a>
+      <a href="https://bundless.dev" className="text-decoration-none">← Back to Home</a>
+      <a href="https://bundless.dev/examples/playground.html" className="text-decoration-none">← Try it out</a>
+      <a href="https://bundless.dev/examples/index.html" className="text-decoration-none">← Examples</a>
       </div>
       <h1>Bundless Benchmarks</h1>  
       <p>Below is the time it took your device to load a 'Hello World' app using a variety of build tools and libraries.</p> 

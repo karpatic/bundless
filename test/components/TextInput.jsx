@@ -1,6 +1,5 @@
 
 import React from 'react';
-console.log('TextInput.js Loaded');
 const TextInput = (props = { text, onChange }) => {
   return (
     <div>

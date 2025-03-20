@@ -77,6 +77,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.warn('bundless not found.');
     return;
   } 
+  
   const attrs = scriptTag.attributes; 
   if (attrs.to) {
     window.Bundless.to = attrs.to.value

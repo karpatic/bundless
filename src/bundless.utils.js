@@ -20,7 +20,7 @@ async function processScripts(scriptTags) {
       pathTo += "/";
     }
 
-    console.log('processScripts: transpileCode:', {pathTo, filename});
+    // console.log('processScripts: transpileCode:', {pathTo, filename});
     const transpiledCode = await window.Bundless.transpileCode(jsxCode, pathTo, filename);
     insertScript(transpiledCode);
   }
@@ -28,7 +28,7 @@ async function processScripts(scriptTags) {
 
 let dynamicImportList = false;
 window.import = async function (path) {
-  console.log("~~~~ window.import: ", path);
+  // console.log("~~~~ window.import: ", path);
   dynamicImportList = [];
   let basePath = path.split("/").slice(0, -1).join("/");
   // console.log("~~~~ basePath: ", basePath);
@@ -151,7 +151,7 @@ async function handleImports(code, pathTo, filename) {
         // Check if the module is already loaded in the window object
         let alreadyLoaded = window[importParts[1]];
         if (alreadyLoaded) {
-          console.log(`Transpiler: AlreadyLoaded: Window.${importParts[1]}`);
+          // console.log(`Transpiler: AlreadyLoaded: Window.${importParts[1]}`);
           transformedLines.push(line);
           continue;
         }
@@ -167,7 +167,8 @@ async function handleImports(code, pathTo, filename) {
           transformedLines.push(newLine);
           continue;
         } else {
-          console.log("Transpiler: ERROR2: CHECK THIS OUT:", line);
+          // Not in import map, nor in window object, nor has a file extension, so skip it... I guess.
+          // console.log("Transpiler: ERROR2: CHECK THIS OUT:", line);
           continue;
         }
       }
@@ -243,7 +244,7 @@ function isInImportMap(moduleName) {
 }
 
 function toPreact(code){
-  if(window.Bundless.to === 'preact'){
+  if(window.Bundless.to == 'preact'){
     let prefix;
     prefix = `import { h, render } from 'https://esm.sh/preact@10.5.13/es2022/preact.mjs';\n`;
     prefix += `import { useState, useEffect, useRef, useMemo } from 'https://esm.sh/preact@10.5.13/es2022/hooks.mjs';\n`; 
