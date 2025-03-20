@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Bundless.Dev</title> 
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Acorn Parser Demo">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css"> 
+</head>
+<body>   
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@17.0.2/es2022/react.mjs",
+        "react-dom": "https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs",
+        "marked": "https://esm.sh/marked@2.0.1"
+      } 
+    }
+  </script> 
+ 
+  <div id="react-root"></div> 
+
+  <script src="https://esm.sh/react@17.0.2/es2022/react.mjs" type="module"></script>
+  <script src="https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs" type="module"></script>
+  <div id="react-root"></div>  
+  <!-- bundless -->
+  <!-- <script src="./../src/bundless.acorn.js" type="module" to="preact"></script>   -->
+  <script src="./dist/bundless.acorn.min.js" type="module" to="preact"></script>  
+  <script type="text/babel">
+    import marked from 'marked';
+    import React from 'react';
+    import ReactDOM from 'react-dom';
+    
+    function App(){
+        let [markdown, setMarkdown] = React.useState('# Hello World');
+        let [html, setHtml] = React.useState(marked(markdown));
+        
+        React.useEffect(() => {
+            setHtml(marked(markdown));
+        }, [markdown]);
+        
+        React.useEffect(() => {
+            fetch('./troubleshooting.md')
+                .then(res => res.text())
+                .then(text => {
+                    setMarkdown(text);
+                });
+        }, []);
+    
+        return ( 
+            <div className="container mt-5">
+                <div
+                    dangerouslySetInnerHTML={{ __html: html }}
+                    className="p-3 border rounded bg-light text-dark"
+                    style={{ fontFamily: 'Arial, sans-serif'}}
+                />  
+            </div>
+        );
+    
+    }
+    
+    ReactDOM.render(<App />, document.getElementById('react-root'));
+    
+     
+  </script> 
+</body>
+</html>
+
+<style>
+
+ 
+      h1, h2, h3, h4, h5, h6 { color: #003366; } /* Darker color for better contrast */
+      p { color: #111111; } /* Darker color for better contrast */
+      blockquote {
+          border-left: 0.25rem solid #999999; /* Changed color for better contrast */
+          padding: 0.8rem 1rem;
+          margin: 1rem 0;
+          font-style: italic;
+          color: #333333; /* Darker color for better contrast */
+          background-color: #e0e0e0; /* Changed color for better contrast */
+          border-left: .25rem solid #333333; /* Changed color for better contrast */
+          padding: .5rem 1rem;
+      }
+      blockquote p { display: inline; }
+      blockquote .blockquote-footer {
+          color: #333333; /* Darker color for better contrast */
+          font-size: 80%;
+      }
+      blockquote .blockquote-footer::before {
+          content: "\\2014\\00A0";
+      }
+      pre {
+          background-color: #d0d0d0; /* Changed color for better contrast */
+          padding: 1rem;
+          border: 1px solid #666666; /* Changed color for better contrast */
+          border-radius: 0.25rem;
+          overflow-x: auto;
+          code {
+              font-family: monospace;
+              font-size: 0.875rem;
+              color: #000000; /* Changed color for better contrast */
+          }
+      }
+  </style>

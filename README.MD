@@ -4,7 +4,7 @@ Create react apps without bundling.
 
 **Bundless.js**: A 36kb browser shim that resolves and tanspiles React JSX code at runtime. 
 
-[Try it out](https://bundless.dev/examples/playground.html) - [Examples](https://bundless.dev/examples/index.html)- [Benchmarks](https://bundless.dev/benchmarks/index.html)
+[Try it out](https://bundless.dev/examples/playground.html) - [Examples](https://bundless.dev/examples/index.html) - [Benchmarks](https://bundless.dev/benchmarks/index.html)
 
 ## Usage  
 
@@ -24,7 +24,7 @@ All `type='text/jsx'`, `/tsx`, and `/babel` scripts will be transpiled onDomLoad
 ``` 
 
 - Add `to="preact"` if you want your react code transpiled to preact.
-- Tips on [Toubleshooting](https://bundless.dev/troubleshooting.md)
+- Tips on [Toubleshooting](http://localhost:3000/troubleshooting.html)
 
 That's it! 
  
