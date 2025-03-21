@@ -1,5 +1,5 @@
 import * as meriyah from "./../rsc/meriyah/meriyah.esm.js"; 
-import { handleImports, processScripts, toPreact } from './bundless.utils.js'
+import { handleImports, handleScriptTag, toPreact } from './bundless.utils.js'
 import { transformAST } from './bundless.utils.ast.transpiler.js';
 
 
@@ -97,5 +97,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.warn("No JSX scripts found.");
     return;
   }
-  processScripts(scriptTags);
+  for (let scriptTag of scriptTags) {
+    await handleScriptTag(scriptTag);
+  }
 }); 

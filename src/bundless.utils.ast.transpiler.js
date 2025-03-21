@@ -262,4 +262,24 @@ function transformAST(ast, debug = {}) {
   };
 }
 
+
+function toPreact(code){
+  if(window.Bundless.to == 'preact'){
+    let prefix;
+    prefix = `import { h, render } from 'https://esm.sh/preact@10.5.13/es2022/preact.mjs';\n`;
+    prefix += `import { useState, useEffect, useRef, useMemo } from 'https://esm.sh/preact@10.5.13/es2022/hooks.mjs';\n`; 
+    code = code.replace(/React.createElement/g, "h");  
+    code = code.replace(/ReactDOM.render/g, "render"); 
+    code = code.replace(/React.useState/g, "useState"); 
+    code = code.replace(/React.useEffect/g, "useEffect");
+    code = code.replace(/React.useRef/g, "useRef");
+    code = code.replace(/React.useMemo/g, "useMemo");
+    code = code.replace(/React.Fragment/g, "");
+    
+    code = code.replace(/import React.*from ['"].*['"];?\n?/g, "");
+    code = prefix + code;
+  } 
+  return code;
+}
+
 export { transformAST };

@@ -1,5 +1,5 @@
 // Babel.transform, .availablePlugins, .availablePresets, .registerPlugin, .registerPreset, .packages.[generator,parser,template,traverse,types]
-import { handleImports, processScripts } from './bundless.utils.js'
+import { handleImports, handleScriptTag } from './bundless.utils.js'
 
 
 
@@ -51,12 +51,18 @@ document.addEventListener("DOMContentLoaded", async () => {
  
   const hasBabel = document.querySelector('script[src*="babel-standalone"]');
   if(hasBabel){
-    processScripts(scriptTags); 
+    for (let scriptTag of scriptTags) {
+      await handleScriptTag(scriptTag);
+    }
   }
   else{ 
     const babelScript = document.createElement("script");
     babelScript.src = "https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.9/babel.min.js";
-    babelScript.onload = () => processScripts(scriptTags);
+    babelScript.onload = async () => {
+      for (let scriptTag of scriptTags) {
+        await handleScriptTag(scriptTag);
+      }
+    }
     document.head.appendChild(babelScript);
   } 
 });

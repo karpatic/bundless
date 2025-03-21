@@ -1,4 +1,4 @@
-import { handleImports, processScripts, toPreact } from './bundless.utils.js'
+import { handleImports, handleScriptTag, toPreact } from './bundless.utils.js'
 import * as sucrase from './../rsc/sucrase/sucrase.esm.js'; 
 
 
@@ -58,7 +58,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   } 
 
-  processScripts(scriptTags);
+  for (let scriptTag of scriptTags) {
+    await handleScriptTag(scriptTag);
+  }
 });
  
  

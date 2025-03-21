@@ -2,7 +2,7 @@
 import { Parser } from "../rsc/acorn/acorn.min.mjs";
 import acornJsxPlugin from "../rsc/acorn/acorn.jsx.min.mjs";
 import { transformAST } from './bundless.utils.ast.transpiler.js';
-import { handleImports, processScripts, toPreact } from './bundless.utils.js'    
+import { handleImports, handleScriptTag, toPreact } from './bundless.utils.js'    
 
 window.Bundless = {
   transformAST,
@@ -88,5 +88,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.warn("No JSX scripts found.");
     return;
   }
-  processScripts(scriptTags);
+  for (let scriptTag of scriptTags) {
+    await handleScriptTag(scriptTag);
+  }
 });
