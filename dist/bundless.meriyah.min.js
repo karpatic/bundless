@@ -43,9 +43,8 @@ async function handleScriptTag(scriptTag) {
   // add 
   if (pathTo && !filename.match(/^(http|\.|\/)/)) {
     pathTo += "/";
-  }
+  } 
 
-  // console.log('processScript: transpileCode:', {pathTo, filename});
   const transpiledCode = await window.Bundless.transpileCode(jsxCode, pathTo, filename); 
   
   // Insert the transpiled code into a new script tag
@@ -85,8 +84,8 @@ window.import = async function (path) {
       throw new Error(`Failed to load ${path}`);
     }
     
-    const code = await response.text();
-    const transpiledCode = await window.Bundless.transpileCode(code, basePath, filename);
+    const code = await response.text(); 
+    const transpiledCode = await window.Bundless.transpileCode(code, basePath+'/', filename);
     
     const blob = new Blob([transpiledCode], { type: "application/javascript" });
     const url = URL.createObjectURL(blob);
