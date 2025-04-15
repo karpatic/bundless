@@ -24,7 +24,7 @@ function transformJSX(code, filePath) {
   
   const sourceMapComment = `//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(sourceMap))}`;
 
-  if(window.Bundless.to == 'preact'){  
+  if(window.Bundless.to === 'preact'){  
     transpiledCode = toPreact(transpiledCode);
   }
 

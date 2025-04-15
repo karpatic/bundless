@@ -31,6 +31,17 @@ function transformAST(ast, debug = {}) {
     let result = "";
     
     switch (node.type) {
+      case "TryStatement":
+        const tryBlock = transformNode(node.block);
+        const catchClause = node.handler ? transformNode(node.handler) : "";
+        const finalizer = node.finalizer ? transformNode(node.finalizer) : "";
+        result = `try ${tryBlock} ${catchClause} ${finalizer ? `finally ${finalizer}` : ""}`;
+        break;
+            case "CatchClause":
+        const param = node.param ? node.param.name : "";
+        const catchBody = transformNode(node.body);
+        result = `catch (${param}) ${catchBody}`;
+        break;
       case "Literal": result = node.raw; break;
       case "Identifier": result = node.name; break;
       case "UnaryExpression": result = `${node.operator} ${transformNode(node.argument)}`; break;
@@ -464,13 +475,14 @@ function toPreact(code){
   if(window.Bundless.to == 'preact'){
     let prefix;
     prefix = `import { h, render } from 'https://esm.sh/preact@10.5.13/es2022/preact.mjs';\n`;
-    prefix += `import { useState, useEffect, useRef, useMemo } from 'https://esm.sh/preact@10.5.13/es2022/hooks.mjs';\n`; 
+    prefix += `import { useState, useEffect, useContext, useRef, useMemo } from 'https://esm.sh/preact@10.5.13/es2022/hooks.mjs';\n`; 
     code = code.replace(/React.createElement/g, "h");  
     code = code.replace(/ReactDOM.render/g, "render"); 
     code = code.replace(/React.useState/g, "useState"); 
     code = code.replace(/React.useEffect/g, "useEffect");
+    code = code.replace(/React.useContext/g, "useContext");
     code = code.replace(/React.useRef/g, "useRef");
-    code = code.replace(/React.useMemo/g, "useMemo");
+    code = code.replace(/React.useMemo/g, "useMemo"); // useContext, useMemo
     code = code.replace(/React.Fragment/g, "");
     
     code = code.replace(/import React.*from ['"].*['"];?\n?/g, "");

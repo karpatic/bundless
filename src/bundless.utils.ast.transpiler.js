@@ -19,6 +19,17 @@ function transformAST(ast, debug = {}) {
     let result = "";
     
     switch (node.type) {
+      case "TryStatement":
+        const tryBlock = transformNode(node.block);
+        const catchClause = node.handler ? transformNode(node.handler) : "";
+        const finalizer = node.finalizer ? transformNode(node.finalizer) : "";
+        result = `try ${tryBlock} ${catchClause} ${finalizer ? `finally ${finalizer}` : ""}`;
+        break;
+            case "CatchClause":
+        const param = node.param ? node.param.name : "";
+        const catchBody = transformNode(node.body);
+        result = `catch (${param}) ${catchBody}`;
+        break;
       case "Literal": result = node.raw; break;
       case "Identifier": result = node.name; break;
       case "UnaryExpression": result = `${node.operator} ${transformNode(node.argument)}`; break;
