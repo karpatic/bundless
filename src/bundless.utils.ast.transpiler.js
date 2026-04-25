@@ -1,10 +1,8 @@
 // Extract debug properties correctly
 // debug { sourceFilename, toEncodedMap }
-function transformAST(ast, debug = {}) { 
+function transformAST(ast, debug = {}) {
   let indent = 0;
-  const spacing = "  ";  
-  
-  
+  const spacing = "  ";
 
   function getIndent() {
     return spacing.repeat(indent);
@@ -15,72 +13,160 @@ function transformAST(ast, debug = {}) {
     if (!node) {
       return "";
     }
-    
+
     let result = "";
-    
+
     switch (node.type) {
       case "TryStatement":
         const tryBlock = transformNode(node.block);
         const catchClause = node.handler ? transformNode(node.handler) : "";
         const finalizer = node.finalizer ? transformNode(node.finalizer) : "";
-        result = `try ${tryBlock} ${catchClause} ${finalizer ? `finally ${finalizer}` : ""}`;
+        result = `try ${tryBlock} ${catchClause} ${
+          finalizer ? `finally ${finalizer}` : ""
+        }`;
         break;
-            case "CatchClause":
+      case "ForStatement":
+        const init = transformNode(node.init);
+        const test = transformNode(node.test);
+        const update = transformNode(node.update);
+        const forBody = transformNode(node.body);
+        result = `for (${init ?? ''}${init?.endsWith(';') ? '' : ';'} ${test ?? ''}; ${update ?? ''}) ${forBody}`;
+        break;
+      case "UpdateExpression":
+        result = `${transformNode(node.argument)}${node.operator}`;
+        break;
+      case "CatchClause":
         const param = node.param ? node.param.name : "";
         const catchBody = transformNode(node.body);
         result = `catch (${param}) ${catchBody}`;
         break;
-      case "Literal": result = node.raw; break;
-      case "Identifier": result = node.name; break;
-      case "UnaryExpression": result = `${node.operator} ${transformNode(node.argument)}`; break;
-      case "Program": 
-        result = node.body.map(transformNode).join("\n\n"); 
+      case "Literal":
+        result = node.raw;
         break;
-      case "ExpressionStatement": result = `${getIndent()}${transformNode(node.expression)};`; break;
-      case "ReturnStatement": result = `return ${transformNode(node.argument)};`; break;
-      case "ExportDefaultDeclaration": result = `export default ${transformNode(node.declaration)};`; break;
-      case "ImportSpecifier": result = node.imported.name; break;
-      case "ImportDefaultSpecifier": result = node.local.name; break;
-      case "ImportExpression": result = `window.import(${transformNode(node.source)})`; break;
+      case "Identifier":
+        result = node.name;
+        break;
+      case "UnaryExpression":
+        result = `${node.operator} ${transformNode(node.argument)}`;
+        break;
+      case "Program":
+        result = node.body.map(transformNode).join("\n\n");
+        break;
+      case "ExpressionStatement":
+        result = `${getIndent()}${transformNode(node.expression)};`;
+        break;
+      case "ReturnStatement":
+        result = `return ${transformNode(node.argument)};`;
+        break;
+      case "ExportDefaultDeclaration":
+        result = `export default ${transformNode(node.declaration)};`;
+        break;
+      case "ImportSpecifier":
+        result = node.imported.name;
+        break;
+      case "ImportDefaultSpecifier":
+        result = node.local.name;
+        break;
+      case "ImportExpression":
+        result = `window.import(${transformNode(node.source)})`;
+        break;
       case "AssignmentExpression": {
-        result = `${transformNode(node.left)} ${node.operator} ${transformNode(node.right)}`;
+        result = `${transformNode(node.left)} ${node.operator} ${transformNode(
+          node.right
+        )}`;
         break;
       }
-      case "SpreadElement": result = `...${transformNode(node.argument)}`; break;
-      case "LogicalExpression": result = `${transformNode(node.left)} ${node.operator} ${transformNode(node.right)}`; break;
-      case "ChainExpression": result = `${transformNode(node.expression)}`; break;
-      case "JSXFragment": result = node.children.map(transformNode).join("\n"); break;
-      case "JSXExpressionContainer": result = transformNode(node.expression); break;
-      case "JSXEmptyExpression": result = ""; break;
-      case "NewExpression": result = `new ${transformNode(node.callee)}(${node.arguments.map(transformNode).join(", ")})`; break;
-      case "TemplateLiteral": 
-        result = '`' + node.quasis.map((quasi, i) => {
-          const value = quasi.value.raw;
-          const expr = node.expressions[i] ? "${" + transformNode(node.expressions[i]) + "}" : "";
-          return value + expr;
-        }).join('') + '`';
+      case "SpreadElement":
+        result = `...${transformNode(node.argument)}`;
+        break;
+      case "LogicalExpression":
+        result = `${transformNode(node.left)} ${node.operator} ${transformNode(
+          node.right
+        )}`;
+        break;
+      case "ChainExpression":
+        result = `${transformNode(node.expression)}`;
+        break;
+      case "JSXFragment":
+        result = node.children.map(transformNode).join("\n");
+        break;
+        case "JSXExpressionContainer":
+          // Wrap the expression in parentheses to preserve the original structure
+          // and ensure operator precedence is maintained
+          const exprValue = transformNode(node.expression);
+          // For complex expressions, ensure we preserve parentheses
+          result = node.expression.type === "BinaryExpression" || 
+                  node.expression.type === "CallExpression" || 
+                  node.expression.type === "MemberExpression" && node.expression.object.type === "BinaryExpression" ? 
+                  `(${exprValue})` : exprValue;
+          break;
+      case "JSXEmptyExpression":
+        result = "";
+        break;
+      case "NewExpression":
+        result = `new ${transformNode(node.callee)}(${node.arguments
+          .map(transformNode)
+          .join(", ")})`;
+        break;
+      case "ThrowStatement":
+        result = `throw new ${transformNode(node.argument)}`;
+        break;
+      case "TemplateLiteral":
+        result =
+          "`" +
+          node.quasis
+            .map((quasi, i) => {
+              const value = quasi.value.raw;
+              const expr = node.expressions[i]
+                ? "${" + transformNode(node.expressions[i]) + "}"
+                : "";
+              return value + expr;
+            })
+            .join("") +
+          "`";
+        break;
+      case "SwitchStatement":
+        const discriminant = transformNode(node.discriminant);
+        const cases = node.cases
+          .map((caseNode) => {
+            const test = caseNode.test ? transformNode(caseNode.test) : "default";
+            const consequent = caseNode.consequent
+              .map(transformNode)
+              .join("\n");
+            return `case ${test}:\n${consequent}`;
+          })
+          .join("\n");
+        result = `switch (${discriminant}) {\n${cases}\n}`;
         break;
       case "ImportDeclaration":
         const specifiers = node.specifiers
           .map((specifier) => transformNode(specifier))
           .filter(Boolean)
-          .join(", "); 
-        const importSource = node.source ? `'${node.source.value}'` : '';
-        if (node.specifiers.some(specifier => specifier.type === 'ImportDefaultSpecifier')) {
-          const defaultSpecifier = node.specifiers.find(specifier => specifier.type === 'ImportDefaultSpecifier');
+          .join(", ");
+        const importSource = node.source ? `'${node.source.value}'` : "";
+        if (
+          node.specifiers.some(
+            (specifier) => specifier.type === "ImportDefaultSpecifier"
+          )
+        ) {
+          const defaultSpecifier = node.specifiers.find(
+            (specifier) => specifier.type === "ImportDefaultSpecifier"
+          );
           if (node.specifiers.length > 1) {
-            const namedImports = node.specifiers.filter(specifier => specifier.type === 'ImportSpecifier').map(transformNode).join(", ");
+            const namedImports = node.specifiers
+              .filter((specifier) => specifier.type === "ImportSpecifier")
+              .map(transformNode)
+              .join(", ");
             result = `import ${defaultSpecifier.local.name}, {${namedImports}} from ${importSource}`;
-          }
-          else{
+          } else {
             const localName = defaultSpecifier.local.name;
             result = `import ${localName} from ${importSource}`;
-          }  
+          }
         } else if (specifiers) {
           result = `import {${specifiers}} from ${importSource}`;
         } else {
           result = `import ${importSource}`;
-        } 
+        }
         break;
       case "FunctionDeclaration":
         const params = node.params
@@ -95,7 +181,9 @@ function transformAST(ast, debug = {}) {
         const body = transformNode(node.body);
         result = `function ${node.id.name}(${params}) ${body}`;
         break;
-      case "AwaitExpression": result = `await ${transformNode(node.argument)}`; break;
+      case "AwaitExpression":
+        result = `await ${transformNode(node.argument)}`;
+        break;
       case "BlockStatement":
         indent++;
         const statements = node.body
@@ -105,37 +193,37 @@ function transformAST(ast, debug = {}) {
         result = `{\n${statements}\n${getIndent()}}`;
         break;
       case "IfStatement":
-        const test = transformNode(node.test);
+        const testExpr = transformNode(node.test);
         const consequent = transformNode(node.consequent);
         const alternate = node.alternate
           ? `else ${transformNode(node.alternate)}`
           : "";
-        result = `if (${test}) ${consequent} ${alternate}`;
+        result = `if (${testExpr}) ${consequent} ${alternate}`;
+        break;
+      case "BreakStatement":
+        result = "break;";
         break;
       case "ConditionalExpression":
-        const testExpr = transformNode(node.test);
+        const testExprConditional = transformNode(node.test);
         const consequentExpr = transformNode(node.consequent);
         const alternateExpr = transformNode(node.alternate);
-        result = `${testExpr} ? ${consequentExpr} : ${alternateExpr}`;
+        result = `${testExprConditional} ? ${consequentExpr} : ${alternateExpr}`;
         break;
-      case "ExportNamedDeclaration": 
+      case "ExportNamedDeclaration":
         result = `export ${transformNode(node.declaration)}`;
         break;
       case "JSXElement": {
         indent++;
         const name = node.openingElement.name.name;
-        const tagName =
-          name[0] === name[0].toUpperCase()
-            ? name
-            : `'${name}'`;
+        const tagName = name[0] === name[0].toUpperCase() ? name : `'${name}'`;
         const props = node.openingElement.attributes
           .map((attr) => {
-            if (attr.type === 'JSXSpreadAttribute') {
+            if (attr.type === "JSXSpreadAttribute") {
               return `...${transformNode(attr.argument)}`;
             }
             const name = attr.name.name;
             const value = attr.value ? transformNode(attr.value) : "true";
-            if (name.includes('-')) {
+            if (name.includes("-")) {
               return `'${name}': ${value}`;
             }
             return `${name}: ${value}`;
@@ -156,35 +244,44 @@ function transformAST(ast, debug = {}) {
       }
       case "JSXText":
         let text = node.value;
-        if (!text.includes('\n')) {
+        if (!text.includes("\n")) {
           text = text.trim();
         } else {
-          text = text.split('\n')
-            .map(line => line.trim())
-            .join('\n')
+          text = text
+            .split("\n")
+            .map((line) => line.trim())
+            .join("\n")
             .trim();
         }
-        const escapedText = text
-          .replace(/'/g, "\\'")
-          .replace(/\n/g, "\\n");
+        const escapedText = text.replace(/'/g, "\\'").replace(/\n/g, "\\n");
         result = text ? `'${escapedText}'` : "";
         break;
-      case "VariableDeclaration":  
+      case "VariableDeclaration":
         const declarations = node.declarations.map(transformNode).join(", ");
-        if (node.kind === "let") {  
+        if (node.kind === "let") {
         }
         result = `${node.kind} ${declarations};`;
         break;
-      case "VariableDeclarator": 
+      case "VariableDeclarator":
         if (!node.init) {
-          result = `${node.id.name};`;
+          result = `${transformNode(node.id)};`;
         } else {
           const init = transformNode(node.init);
           if (node.id.type === "ArrayPattern") {
             const elements = node.id.elements
-              .map((el) => el ? el.name : "undefined")
+              .map((el) => (el ? el.name : "undefined"))
               .join(", ");
             result = `[${elements}] = ${init}`;
+          } else if (node.id.type === "ObjectPattern") {
+            const properties = node.id.properties
+              .map((prop) => {
+                if (prop.key.type === "Identifier") {
+                  return prop.key.name;
+                }
+                return prop.key.value;
+              })
+              .join(", ");
+            result = `{${properties}} = ${init}`;
           } else {
             result = `${node.id.name} = ${init}`;
           }
@@ -192,13 +289,22 @@ function transformAST(ast, debug = {}) {
         break;
       case "CallExpression":
         if (node.callee.type === "MemberExpression") {
-          const object = transformNode(node.callee.object);
           const property = node.callee.property.name;
           const args = node.arguments.map(transformNode).join(", ");
-          result = `${object}.${property}(${args})`;
+          
+          // Check if object is a BinaryExpression that needs parentheses
+          const object = node.callee.object;
+          const needsParens = object.type === "BinaryExpression" || 
+                              (object.type === "BinaryExpression" && 
+                              (object.left.type === "BinaryExpression" || 
+                                object.right.type === "BinaryExpression"));
+          
+          const objectCode = transformNode(object);
+          result = `${needsParens ? `(${objectCode})` : objectCode}.${property}(${args})`;
+        } else {
+          const args = node.arguments.map(transformNode).join(", ");
+          result = `${transformNode(node.callee)}(${args})`;
         }
-        const args = node.arguments.map(transformNode).join(", ");
-        result = `${transformNode(node.callee)}(${args})`;
         break;
       case "ArrowFunctionExpression":
         const arrowParams = node.params
@@ -225,7 +331,7 @@ function transformAST(ast, debug = {}) {
         const asyncKeyword = node.async ? "async " : "";
         result = `${asyncKeyword}(${arrowParams}) => ${arrowBody}`;
         break;
-      case "ObjectExpression": 
+      case "ObjectExpression":
         const properties = node.properties
           .map((p) => {
             if (p.type === "SpreadElement") {
@@ -244,12 +350,16 @@ function transformAST(ast, debug = {}) {
           node.right
         )}`;
         break;
-      case "MemberExpression": 
+      case "MemberExpression":
         if (node.computed) {
-          result = `${transformNode(node.object)}[${transformNode(node.property)}]`;
+          result = `${transformNode(node.object)}[${transformNode(
+            node.property
+          )}]`;
         } else {
-          const optionalChaining = node.optional ? '?.' : '.';
-          result = `${transformNode(node.object)}${optionalChaining}${node.property.name}`; 
+          const optionalChaining = node.optional ? "?." : ".";
+          result = `${transformNode(node.object)}${optionalChaining}${
+            node.property.name
+          }`;
         }
         break;
       case "ArrayExpression":
@@ -260,36 +370,35 @@ function transformAST(ast, debug = {}) {
         console.log("Unhandled node:", node.type, node);
         result = "";
     }
-    
+
     debug?.updatePosition?.(result, node);
     return result;
-  } 
+  }
 
-  let output = transformNode(ast); 
-  const sourceMap = debug?.toEncodedMap?.(debug.map); 
+  let output = transformNode(ast);
+  const sourceMap = debug?.toEncodedMap?.(debug.map);
   return {
     code: output,
-    map: sourceMap
+    map: sourceMap,
   };
 }
 
-
-function toPreact(code){
-  if(window.Bundless.to == 'preact'){
+function toPreact(code) {
+  if (window.Bundless.to == "preact") {
     let prefix;
     prefix = `import { h, render } from 'https://esm.sh/preact@10.5.13/es2022/preact.mjs';\n`;
-    prefix += `import { useState, useEffect, useRef, useMemo } from 'https://esm.sh/preact@10.5.13/es2022/hooks.mjs';\n`; 
-    code = code.replace(/React.createElement/g, "h");  
-    code = code.replace(/ReactDOM.render/g, "render"); 
-    code = code.replace(/React.useState/g, "useState"); 
+    prefix += `import { useState, useEffect, useRef, useMemo } from 'https://esm.sh/preact@10.5.13/es2022/hooks.mjs';\n`;
+    code = code.replace(/React.createElement/g, "h");
+    code = code.replace(/ReactDOM.render/g, "render");
+    code = code.replace(/React.useState/g, "useState");
     code = code.replace(/React.useEffect/g, "useEffect");
     code = code.replace(/React.useRef/g, "useRef");
     code = code.replace(/React.useMemo/g, "useMemo");
     code = code.replace(/React.Fragment/g, "");
-    
+
     code = code.replace(/import React.*from ['"].*['"];?\n?/g, "");
     code = prefix + code;
-  } 
+  }
   return code;
 }
 

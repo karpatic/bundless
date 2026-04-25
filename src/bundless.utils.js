@@ -13,6 +13,11 @@ function transformStaticImportsToDynamic(importPath, importFileName, namedExport
   if (namedExports.length > 0) {
     dynamicImportCode += `const {${namedExports.join(", ")}} = await window.import('${importPath}${importFileName}'); `;
   }
+
+  // Handle entire file
+  if (namedExports.length == 0 && !defaultExport) {
+    dynamicImportCode += `await window.import('${importPath}${importFileName}'); `;
+  }
   
   return dynamicImportCode;
 }
@@ -109,12 +114,12 @@ window.import = async function (path) {
 let handleImportLine = function (line, currentFilePath, fileName) {  
   line = line.replace(/\{/g, ' { ').replace(/\}/g, ' } '); // Brackets NEED spaces
   let importParts = line.trim().split(" ");
-  // console.log('handleImportLine:', {currentFilePath, importParts}); 
+  // console.log('handleImportLine:', {line, currentFilePath, importParts}); 
   let importPath = importParts.at(-1).replaceAll(/['";]/g, "");
 
   // Gather class and variable names
   let namedExports = []; 
-  let done, inBrackets, defaultExport = false; 
+  let done, inBrackets, defaultExport = false;  
   let imported = importParts.map((part) => {
       part = part.trim().replaceAll(/['";]/g, "").replaceAll(",", "");
       if (done || ["import"].includes(part)) { return false; }  // Stop start and skip conditions
@@ -125,11 +130,14 @@ let handleImportLine = function (line, currentFilePath, fileName) {
       else { 
         list.push(part);
         if (inBrackets) { namedExports.push(part); }            // named export
-        else { defaultExport = part; }                          // default export
+        else { defaultExport = line.includes(' from ') && part; } // default export
         return part;
       }
     }).filter(Boolean); 
   if (imported.length == 0) return line;
+  
+  
+  
  
   let alreadyLoaded = window[importParts[1]];
   if (alreadyLoaded) { return line; }
@@ -142,12 +150,13 @@ let handleImportLine = function (line, currentFilePath, fileName) {
   
   let importFileName = importPath.split("/").slice(-1)[0];  
   importPath = importPath.split("/").slice(0, -1).join("/")+"/";
+ 
 
   const isRelativePath = importPath.startsWith(".");  
   if (isRelativePath) {      
     currentFilePath = currentFilePath.replace(/\/$/, "");
     let newPath = currentFilePath.split("/");
-    // console.log('getPath:', newPath);
+    // console.log('getPath:', newPath); 
     for (let part of importPath.split("/") ) {
         if (part === "..") { if (newPath.length > 0) {
             newPath.pop();
@@ -157,15 +166,18 @@ let handleImportLine = function (line, currentFilePath, fileName) {
         }
     }
     
-     
     // console.log('getPath:', {currentFilePath, importPath, newPath:newPath.join("/")}); 
     importPath = newPath.join("/");
+ 
 
   } else{ } 
+
+  if (!window.Bundless.cache) {
+    importFileName += `?cachebust=${Date.now()}`;
+  }
   
-  // check if .js
-  const isJS = line.includes(".js") || line.includes(".ts");
-  if (isJS) {
+    const isModuleFile = /\.(mjs|js|ts)(\?|$)/.test(importFileName);
+    if (isModuleFile) {
     let newLine = transformStaticImportsToDynamic(importPath, importFileName, namedExports, defaultExport);
     // console.log('handleImportLine: importPath:', {importPath, importFileName, newLine});
     return newLine;

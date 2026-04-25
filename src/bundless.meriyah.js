@@ -7,6 +7,7 @@ import { transformAST } from './bundless.utils.ast.transpiler.js';
 window.Bundless = {
   transformAST,
   transpileCode,
+  cache: true,
   to: 'react',
   prod: false, 
 }; 

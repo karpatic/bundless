@@ -1,5 +1,5 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import ReactDOM from 'react-dom'; 
 
 // import Child from './Child.jsx';
 import { Child } from './nested/Nested.jsx';

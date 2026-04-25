@@ -7,6 +7,7 @@ import { handleImports, handleScriptTag } from './bundless.utils.js'
 window.Bundless = { 
   transpileCode,
   to: 'react',
+  cache: true,
   prod: false,
 };
 

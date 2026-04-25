@@ -1,10 +1,9 @@
 import { handleImports, handleScriptTag, toPreact } from './bundless.utils.js'
 import * as sucrase from './../rsc/sucrase/sucrase.esm.js'; 
 
-
-
 window.Bundless = { 
   transpileCode,
+  cache: true,
   to: 'react',
   prod: false,
 };

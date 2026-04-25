@@ -7,6 +7,7 @@ import { handleImports, handleScriptTag, toPreact } from './bundless.utils.js'
 window.Bundless = {
   transformAST,
   transpileCode,
+  cache: true,
   to: 'react',
   prod: false, 
 }; 
@@ -24,7 +25,7 @@ async function transformJSX(code, filePath) {
   if (!window.Bundless.prod) { 
 
     const loadSourceMapTools = async () => {
-      console.log('Loading Sucrase');
+      // console.log('Loading Acorn');
       const { GenMapping, maybeAddSegment, toEncodedMap } = await import('../rsc/sucrase/gen-mapping.umd.js');
       const { initSourceMapper, setActiveMapper } = await import('./bundless.utils.ast.sourecmapper.js');
       SMTools = { GenMapping, maybeAddSegment, toEncodedMap, initSourceMapper, setActiveMapper };
@@ -32,7 +33,7 @@ async function transformJSX(code, filePath) {
     }; 
     SMTools = await loadSourceMapTools();
 
-    console.log('~~~~ transformJSX:', 'filePath', filePath);
+    // console.log('~~~~ transformJSX:', 'filePath', filePath);
     const sourceMapper = SMTools.initSourceMapper({
       GenMapping: SMTools.GenMapping,
       maybeAddSegment: SMTools.maybeAddSegment,
@@ -56,7 +57,7 @@ async function transformJSX(code, filePath) {
     return transpiledCode 
   }
   else{ 
-    console.log('~~~~ transformJSX:', 'filePath', filePath);
+    // console.log('~~~~ transformJSX:', 'filePath', filePath);
     const sourceMapComment = `//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(map))}`; 
     return `${transpiledCode}\n${sourceMapComment}`; 
   } 
@@ -81,6 +82,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const attrs = scriptTag.attributes; 
   if (attrs.to) {
     window.Bundless.to = attrs.to.value
+  }
+
+  if (attrs.cache && attrs.cache.value === "false") {
+    window.Bundless.cache = false;
   }
 
   const scriptTags = document.querySelectorAll("script[type='text/jsx'], script[type='text/babel']"); 
