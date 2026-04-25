@@ -36,6 +36,12 @@ That's it!
 1. Imports are inserted into the page as modules
 2. Dynamic import() behavior gets modified 
 
+## Publication
+
+- Git tags now drive the release flow through GitHub Actions.
+- Release bundles are attached to GitHub Releases and can be fetched from the GitHub-backed jsDelivr CDN, for example `https://cdn.jsdelivr.net/gh/karpatic/bundless@v1.0.1/dist/bundless.acorn.min.js`.
+- The npm/unpkg/jsDelivr npm route is not wired for this repo under the current package name because `bundless` on npm is already owned by a different project. To publish there, rename the package to an available scoped name such as `@karpatic/bundless` and add an `NPM_TOKEN` secret.
+
 ## Memes
 
 <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
