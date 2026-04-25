@@ -40,7 +40,9 @@ That's it!
 
 - Git tags now drive the release flow through GitHub Actions.
 - Release bundles are attached to GitHub Releases and can be fetched from the GitHub-backed jsDelivr CDN, for example `https://cdn.jsdelivr.net/gh/karpatic/bundless@v1.0.1/dist/bundless.acorn.min.js`.
-- The npm/unpkg/jsDelivr npm route is not wired for this repo under the current package name because `bundless` on npm is already owned by a different project. To publish there, rename the package to an available scoped name such as `@karpatic/bundless` and add an `NPM_TOKEN` secret.
+- npm publication is now wired for the publishable package name `bundlessdev`.
+- Push a version tag like `v1.0.3` after bumping `package.json`, and GitHub Actions will build, create the GitHub Release, and publish that same version to npm when the `NPM_TOKEN` repository secret is set.
+- Plain pushes to `main` still run the release workflow, but npm publication only succeeds when the version in `package.json` is new on npm. In practice, use version bumps plus tag pushes for actual releases.
 
 ## Memes
 

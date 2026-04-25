@@ -1,5 +1,5 @@
 {
-    "name": "bundless",
+    "name": "bundlessdev",
     "version": "1.0.2",
     "description": "Build on Browser, Bundle less",
     "main": "dist/bundless.acorn.min.js",

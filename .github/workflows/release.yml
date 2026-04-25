@@ -2,6 +2,8 @@ name: Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*.*.*"
   workflow_dispatch:
@@ -16,6 +18,7 @@ jobs:
       package_name: ${{ steps.package.outputs.name }}
       package_version: ${{ steps.package.outputs.version }}
       release_tag: ${{ steps.package.outputs.tag }}
+      is_tag_push: ${{ steps.package.outputs.is_tag_push }}
 
     steps:
       - name: Check out repository
@@ -39,9 +42,14 @@ jobs:
           echo "name=$(node -p \"require('./package.json').name\")" >> "$GITHUB_OUTPUT"
           echo "version=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
           echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "is_tag_push=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_tag_push=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Validate tag version
-        if: github.event_name == 'push'
+        if: github.ref_type == 'tag'
         run: |
           test "v${{ steps.package.outputs.version }}" = "${{ steps.package.outputs.tag }}"
 
@@ -49,6 +57,7 @@ jobs:
         run: npm pack --dry-run
 
       - name: Create GitHub release
+        if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name || format('v{0}', steps.package.outputs.version) }}
@@ -59,7 +68,7 @@ jobs:
 
   npm-publish:
     needs: release
-    if: startsWith(needs.release.outputs.package_name, '@') && secrets.NPM_TOKEN != ''
+    if: secrets.NPM_TOKEN != ''
     runs-on: ubuntu-latest
 
     steps:
@@ -79,7 +88,24 @@ jobs:
       - name: Build release bundles
         run: npm run release:build
 
+      - name: Validate published version for tag pushes
+        if: needs.release.outputs.is_tag_push == 'true'
+        run: |
+          test "v$(node -p \"require('./package.json').version\")" = "${GITHUB_REF_NAME}"
+
+      - name: Check if npm version already exists
+        id: npm_version
+        run: |
+          package_name=$(node -p "require('./package.json').name")
+          package_version=$(node -p "require('./package.json').version")
+          if npm view "${package_name}@${package_version}" version >/dev/null 2>&1; then
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish to npm
-        run: npm publish
+        if: steps.npm_version.outputs.should_publish == 'true'
+        run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
