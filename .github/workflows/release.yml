@@ -68,7 +68,6 @@ jobs:
 
   npm-publish:
     needs: release
-    if: secrets.NPM_TOKEN != ''
     runs-on: ubuntu-latest
 
     steps:
@@ -104,8 +103,19 @@ jobs:
             echo "should_publish=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Check npm token availability
+        id: npm_auth
+        run: |
+          if [ -n "${NPM_TOKEN}" ]; then
+            echo "has_token=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_token=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Publish to npm
-        if: steps.npm_version.outputs.should_publish == 'true'
+        if: steps.npm_auth.outputs.has_token == 'true' && steps.npm_version.outputs.should_publish == 'true'
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
