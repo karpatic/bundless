@@ -43,7 +43,7 @@ That's it!
 - Release bundles are attached to GitHub Releases and can be fetched from the GitHub-backed jsDelivr CDN, for example `https://cdn.jsdelivr.net/gh/karpatic/bundless@v1.0.1/dist/bundless.acorn.min.js`.
 - GitHub Releases are live through `v1.0.6`, and the GitHub-backed jsDelivr route is the current verified CDN path.
 - The npm package `bundlessdev` is published to npmjs, and the same release flow can also publish a GitHub Packages variant as `@karpatic/bundlessdev`.
-- Run the local release build, bump `package.json`, and then push a version tag like `v1.0.8`; GitHub Actions will use the checked-in `dist` files to create the GitHub Release, publish `bundlessdev` to npm through trusted publishing via OIDC, and publish `@karpatic/bundlessdev` to GitHub Packages with `GITHUB_TOKEN`.
+- Run the local release build, bump `package.json`, and then push a version tag like `v1.0.9`; GitHub Actions will use the checked-in `dist` files to create the GitHub Release, publish `bundlessdev` to npm through trusted publishing via OIDC, and publish `@karpatic/bundlessdev` to GitHub Packages with `GITHUB_TOKEN`.
 - The release workflow now runs on version tags instead of every `main` push so release history stays focused on real versioned releases.
 
 ## Memes

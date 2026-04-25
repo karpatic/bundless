@@ -41,6 +41,7 @@ jobs:
             `version=${pkg.version}`,
             `tag=${refName}`,
             `github_name=@${owner}/${pkg.name}`,
+            `github_scope=@${owner}`,
           ];
           fs.appendFileSync(outputPath, `${lines.join('\n')}\n`);
           NODE
@@ -93,6 +94,16 @@ jobs:
       - name: Verify GitHub package contents
         working-directory: .github-package
         run: npm pack --dry-run
+
+      - name: Configure GitHub Packages auth
+        working-directory: .github-package
+        run: |
+          cat <<EOF > .npmrc
+          ${{ steps.package.outputs.github_scope }}:registry=https://npm.pkg.github.com
+          //npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
+          EOF
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
 
       - name: Check if GitHub Packages version already exists
         id: github_version
