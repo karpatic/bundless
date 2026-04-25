@@ -41,9 +41,10 @@ That's it!
 - Git tags now drive the release flow through GitHub Actions.
 - Release builds are expected to be created locally before you tag and push a release.
 - Release bundles are attached to GitHub Releases and can be fetched from the GitHub-backed jsDelivr CDN, for example `https://cdn.jsdelivr.net/gh/karpatic/bundless@v1.0.1/dist/bundless.acorn.min.js`.
-- npm publication is now wired for the publishable package name `bundlessdev`.
-- Run the local release build, bump `package.json`, and then push a version tag like `v1.0.3`; GitHub Actions will use the checked-in `dist` files to create the GitHub Release and publish that same version to npm when the `NPM_TOKEN` repository secret is set.
-- Plain pushes to `main` still run the release workflow, but npm publication only succeeds when the version in `package.json` is new on npm. In practice, use version bumps plus tag pushes for actual releases.
+- GitHub Releases are live through `v1.0.6`, and the GitHub-backed jsDelivr route is the current verified CDN path.
+- The npm package `bundlessdev` is live on the npm registry, and the npm-backed jsDelivr route also resolves for the published package.
+- Run the local release build, bump `package.json`, and then push a version tag like `v1.0.6`; GitHub Actions will use the checked-in `dist` files to create the GitHub Release, and the dedicated `npm-publish.yml` workflow will publish the same tag through npm trusted publishing via OIDC.
+- The release workflow now runs on version tags instead of every `main` push so release history stays focused on real versioned releases.
 
 ## Memes
 

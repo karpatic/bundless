@@ -2,24 +2,16 @@ name: Release
 
 on:
   push:
-    branches:
-      - main
     tags:
       - "v*.*.*"
   workflow_dispatch:
 
 permissions:
   contents: write
-  id-token: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
-    outputs:
-      package_name: ${{ steps.package.outputs.name }}
-      package_version: ${{ steps.package.outputs.version }}
-      release_tag: ${{ steps.package.outputs.tag }}
-      is_tag_push: ${{ steps.package.outputs.is_tag_push }}
 
     steps:
       - name: Check out repository
@@ -63,50 +55,3 @@ jobs:
           files: |
             dist/*.js
             dist/*.br
-
-  npm-publish:
-    needs: release
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Set up Node.js for npm publish
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          registry-url: https://registry.npmjs.org
-
-      - name: Validate published version for tag pushes
-        if: needs.release.outputs.is_tag_push == 'true'
-        run: |
-          test "v$(node -p \"require('./package.json').version\")" = "${GITHUB_REF_NAME}"
-
-      - name: Check if npm version already exists
-        id: npm_version
-        run: |
-          package_name=$(node -p "require('./package.json').name")
-          package_version=$(node -p "require('./package.json').version")
-          if npm view "${package_name}@${package_version}" version >/dev/null 2>&1; then
-            echo "should_publish=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "should_publish=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Check npm token availability
-        id: npm_auth
-        run: |
-          if [ -n "${NPM_TOKEN}" ]; then
-            echo "has_token=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_token=false" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish to npm
-        if: steps.npm_auth.outputs.has_token == 'true' && steps.npm_version.outputs.should_publish == 'true'
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
