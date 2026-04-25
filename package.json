@@ -1,6 +1,6 @@
 {
     "name": "bundlessdev",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "description": "Build on Browser, Bundle less",
     "main": "dist/bundless.acorn.min.js",
     "module": "dist/bundless.acorn.min.js",
@@ -47,6 +47,7 @@
         "@babel/preset-react": "^7.15.7",
         "@rollup/plugin-replace": "^6.0.2",
         "babel-loader": "^8.2.3",
+        "esbuild": "^0.25.11",
         "rollup": "^2.79.2",
         "rollup-plugin-gzip": "^4.0.1",
         "rollup-plugin-terser": "^7.0.2",
