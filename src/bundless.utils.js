@@ -64,21 +64,32 @@ function isInImportMap(moduleName) {
   }
 }
 
-let dynamicImportList = false; 
-window.import = async function (path) {
+let dynamicImportList = false;
+const moduleImportCache = new Map();
+
+function normalizeModuleImportPath(path) {
+  const modulePath = String(path);
+  try {
+    return new URL(modulePath, location.href).href;
+  } catch (error) {
+    return modulePath;
+  }
+}
+
+async function loadModuleImport(normalizedPath) {
   // Store previous value and set new one for this import
   const previousDynamicImportList = dynamicImportList;
   dynamicImportList = [];
   
-  let basePath = path.split("/").slice(0, -1).join("/");
-  let filename = path.split("/").slice(-1)[0];
+  let basePath = normalizedPath.split("/").slice(0, -1).join("/");
+  let filename = normalizedPath.split("/").slice(-1)[0];
   
   try {
-    // console.log('fetching', path);
-    const response = await fetch(path);
+    // console.log('fetching', normalizedPath);
+    const response = await fetch(normalizedPath);
     if (!response.ok) {
-      console.error(`Failed to load ${path}: ${response.statusText}`);
-      throw new Error(`Failed to load ${path}`);
+      console.error(`Failed to load ${normalizedPath}: ${response.statusText}`);
+      throw new Error(`Failed to load ${normalizedPath}`);
     }
     
     const code = await response.text(); 
@@ -95,7 +106,7 @@ window.import = async function (path) {
       
       // Add specific debugging for the destructuring error
       if (error.message.includes('Cannot destructure property')) {
-        console.warn(`The module at ${path} doesn't export the expected properties. Check that all imports match their exports.`);
+        console.warn(`The module at ${normalizedPath} doesn't export the expected properties. Check that all imports match their exports.`);
         // You could add code here to log the transpiled code for debugging
         // console.log("Transpiled code:", transpiledCode);
       }
@@ -108,6 +119,21 @@ window.import = async function (path) {
     // Always restore the previous value, even if an error occurred
     dynamicImportList = previousDynamicImportList;
   }
+}
+
+window.import = function (path) {
+  const normalizedPath = normalizeModuleImportPath(path);
+  const cachedImport = moduleImportCache.get(normalizedPath);
+  if (cachedImport) {
+    return cachedImport;
+  }
+
+  const importPromise = loadModuleImport(normalizedPath).catch((error) => {
+    moduleImportCache.delete(normalizedPath);
+    throw error;
+  });
+  moduleImportCache.set(normalizedPath, importPromise);
+  return importPromise;
 };
 
 

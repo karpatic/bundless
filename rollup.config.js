@@ -1,5 +1,6 @@
 import replace from '@rollup/plugin-replace';
 import gzipPlugin from 'rollup-plugin-gzip';
+import { terser } from 'rollup-plugin-terser';
 
 // Create configurations for both production and development builds
 export default [
@@ -36,6 +37,27 @@ export default [
                 'window.Bundless.prod': JSON.stringify(true),
                 preventAssignment: true
             }),
+            gzipPlugin({
+                customCompression: content =>
+                    require('zlib').brotliCompressSync(Buffer.from(content)),
+                fileName: '.br', // Add .br extension for Brotli files
+            })
+        ]
+    },
+    // Acorn Production Alias Build
+    {
+        input: './src/bundless.acorn.js',
+        output: {
+            dir: './dist',
+            entryFileNames: 'bundless.acorn.prod.js',
+            format: 'esm',
+        },
+        plugins: [
+            replace({
+                'window.Bundless.prod': JSON.stringify(true),
+                preventAssignment: true
+            }),
+            terser(),
             gzipPlugin({
                 customCompression: content =>
                     require('zlib').brotliCompressSync(Buffer.from(content)),
@@ -82,7 +104,28 @@ export default [
                 fileName: '.br', // Add .br extension for Brotli files
             })
         ]
-    }, 
+    },
+    // Meriyah Production Alias Build
+    {
+        input: './src/bundless.meriyah.js',
+        output: {
+            dir: './dist',
+            entryFileNames: 'bundless.meriyah.prod.js',
+            format: 'esm',
+        },
+        plugins: [
+            replace({
+                'window.Bundless.prod': JSON.stringify(true),
+                preventAssignment: true
+            }),
+            terser(),
+            gzipPlugin({
+                customCompression: content =>
+                    require('zlib').brotliCompressSync(Buffer.from(content)),
+                fileName: '.br', // Add .br extension for Brotli files
+            })
+        ]
+    },
     // Babel Build
     {
         input: './src/bundless.babel.js',

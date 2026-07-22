@@ -1,6 +1,6 @@
 {
     "name": "bundlessdev",
-    "version": "1.0.9",
+    "version": "1.0.10",
     "description": "Build on Browser, Bundle less",
     "main": "dist/bundless.acorn.min.js",
     "module": "dist/bundless.acorn.min.js",
@@ -29,10 +29,12 @@
         "access": "public"
     },
     "scripts": {
+        "test": "node --test test/*.test.mjs",
         "rollup": "rollup --config rollup.config.js",
         "buildb": "esbuild ./src/bundless.babel.js --bundle --minify --outfile=./dist/bundless.babel.min.js --format=esm",
-        "release:build": "npm run rollup && npm run buildb",
-        "compress": "ebrotli-cli compress ./dist/bundless.acorn.min.js && brotli-cli compress ./dist/bundless.babel.min.js",
+        "compress:dist": "node scripts/brotli-dist.mjs",
+        "release:build": "npm run rollup && npm run buildb && npm run compress:dist",
+        "compress": "npm run compress:dist",
         "compressa": "npx terser ./dist/bundless.acorn.min.js --compress --output ./dist/bundless.acorn.min.js && brotli-cli compress ./dist/bundless.acorn.min.js",
         "rollm": "npx terser ./dist/bundless.meriyah.min.js --compress --output ./dist/bundless.meriyah.min.js && brotli-cli compress ./dist/bundless.meriyah.min.js",
         "rolls": "&& npx terser ./dist/bundless.sucrase.min.js --compress --output ./dist/bundless.sucrase.min.js && brotli-cli compress ./dist/bundless.sucrase.min.js",
