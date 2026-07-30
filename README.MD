@@ -30,6 +30,12 @@ All `type='text/jsx'`, `/tsx`, and `/babel` scripts will be transpiled onDomLoad
 That's it! 
  
  
+## Source maps
+
+Acorn and Meriyah intentionally split their runtime source-map behavior by build variant. The `.dev.js` variants include runtime inline source maps for debugging. The default/minified variants, such as `bundless.acorn.min.js` and `bundless.meriyah.min.js`, and the explicit `.prod.js` variants omit runtime source maps to avoid production size and runtime overhead.
+
+This policy is specific to the Acorn and Meriyah runtime transpiler paths. Babel and Sucrase keep their existing transpiler-specific source-map behavior rather than following the Acorn/Meriyah dev/prod matrix.
+
 
 ## How it works
 
