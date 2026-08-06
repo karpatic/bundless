@@ -43,6 +43,34 @@ Use `window.Bundless.prefetch()` when an app already knows which JS, JSX, or TS 
 ```
 
 Prefetch accepts one URL or an iterable of URLs. It fetches module source only and does not transpile, import, or evaluate the module. Later `window.import()` calls reuse the same pending or resolved source fetch by normalized original URL, so equivalent URLs deduplicate while query strings and cache busters remain distinct. Failed prefetches and failed imports are evicted so retrying fetches again.
+
+## Webpack migration
+
+Bundless apps can move to Webpack without changing application modules that call `window.import()`:
+
+```js
+const BundlessWebpackPlugin = require("bundlessdev/webpack");
+
+module.exports = {
+  entry: "./src/index.jsx",
+  module: {
+    rules: [
+      {
+        test: /\.[jt]sx?$/,
+        exclude: /node_modules/,
+        use: "babel-loader"
+      }
+    ]
+  },
+  plugins: [new BundlessWebpackPlugin()]
+};
+```
+
+The plugin injects a small pre-loader for JavaScript, JSX, TypeScript, and TSX files. Literal `window.import("./Widget.jsx")` calls become native `import("./Widget.jsx")` expressions so Webpack owns module resolution and chunking. `window.Bundless.prefetch("./Widget.jsx")` and string-array prefetches become Webpack prefetch hints that return a resolved Promise; pass `{ prefetch: "noop" }` to make prefetch calls pure no-ops instead.
+
+Bundless does not transform JSX in Webpack. Keep React imports in your source and configure Babel, SWC, esbuild, or another JSX loader exactly as you normally would.
+
+Use a normal Webpack entry and avoid the browser runtime bootstrap in the built app. Remove the Bundless `<script src="...bundless.*.js">` tag and `type="text/jsx"`/`type="text/babel"` script tags from your production HTML template, or keep using HtmlWebpackPlugin and let `new BundlessWebpackPlugin()` strip those tags from emitted HTML. The plugin also aliases Bundless runtime package entry points to `false` by default so accidental runtime imports are not bundled. For manual rule wiring, the loader is exported as `bundlessdev/webpack/loader`.
  
  
 ## Source maps

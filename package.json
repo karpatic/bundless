@@ -11,6 +11,8 @@
         "./babel": "./dist/bundless.babel.min.js",
         "./meriyah": "./dist/bundless.meriyah.min.js",
         "./sucrase": "./dist/bundless.sucrase.min.js",
+        "./webpack": "./dist/bundless.webpack.cjs",
+        "./webpack/loader": "./dist/bundless.webpack-loader.cjs",
         "./package.json": "./package.json"
     },
     "files": [
@@ -32,8 +34,9 @@
         "test": "node --test test/*.test.mjs",
         "rollup": "rollup --config rollup.config.js",
         "buildb": "esbuild ./src/bundless.babel.js --bundle --minify --outfile=./dist/bundless.babel.min.js --format=esm",
+        "buildw": "esbuild ./src/webpack/index.cjs --bundle --platform=node --format=cjs --outfile=./dist/bundless.webpack.cjs && esbuild ./src/webpack/loader.cjs --bundle --platform=node --format=cjs --outfile=./dist/bundless.webpack-loader.cjs",
         "compress:dist": "node scripts/brotli-dist.mjs",
-        "release:build": "npm run rollup && npm run buildb && npm run compress:dist",
+        "release:build": "npm run rollup && npm run buildb && npm run buildw && npm run compress:dist",
         "compress": "npm run compress:dist",
         "compressa": "npx terser ./dist/bundless.acorn.min.js --compress --output ./dist/bundless.acorn.min.js && brotli-cli compress ./dist/bundless.acorn.min.js",
         "rollm": "npx terser ./dist/bundless.meriyah.min.js --compress --output ./dist/bundless.meriyah.min.js && brotli-cli compress ./dist/bundless.meriyah.min.js",
