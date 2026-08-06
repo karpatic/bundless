@@ -5,6 +5,7 @@ import { transformAST } from './bundless.utils.ast.transpiler.js';
 import { handleImports, handleScriptTag, toPreact } from './bundless.utils.js'    
 
 window.Bundless = {
+  ...window.Bundless,
   transformAST,
   transpileCode,
   cache: true,

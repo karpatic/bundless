@@ -2,6 +2,7 @@ import { handleImports, handleScriptTag, toPreact } from './bundless.utils.js'
 import * as sucrase from './../rsc/sucrase/sucrase.esm.js'; 
 
 window.Bundless = { 
+  ...window.Bundless,
   transpileCode,
   cache: true,
   to: 'react',
@@ -61,5 +62,5 @@ document.addEventListener("DOMContentLoaded", async () => {
     await handleScriptTag(scriptTag);
   }
 });
- 
+
  

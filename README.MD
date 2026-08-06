@@ -28,6 +28,21 @@ All `type='text/jsx'`, `/tsx`, and `/babel` scripts will be transpiled onDomLoad
 - Tips on [Toubleshooting](http://localhost:3000/troubleshooting.html)
 
 That's it! 
+
+## Module prefetching
+
+Use `window.Bundless.prefetch()` when an app already knows which JS, JSX, or TS module URLs it will import soon:
+
+```html
+<script>
+  window.Bundless.prefetch([
+    "./components/App.jsx",
+    "./routes/Dashboard.jsx?startup=1"
+  ]);
+</script>
+```
+
+Prefetch accepts one URL or an iterable of URLs. It fetches module source only and does not transpile, import, or evaluate the module. Later `window.import()` calls reuse the same pending or resolved source fetch by normalized original URL, so equivalent URLs deduplicate while query strings and cache busters remain distinct. Failed prefetches and failed imports are evicted so retrying fetches again.
  
  
 ## Source maps
@@ -41,9 +56,10 @@ This policy is specific to the Acorn and Meriyah runtime transpiler paths. Babel
 
 1. Modules resolve using `<script type="importmap">`.
 2. Static imports are rewritten to the custom `window.import()` loader.
-3. `window.import()` fetches and transpiles modules, then imports the transpiled blob.
-4. Repeated or concurrent imports of the same normalized original module URL share the same pending promise and resolved module.
-5. Failed imports are removed from the module cache so the next call can retry, and cache-busting query strings remain part of the cache key.
+3. `window.Bundless.prefetch()` can warm the shared source-fetch cache without evaluating modules.
+4. `window.import()` reuses any prefetched source, transpiles it, then imports the transpiled blob.
+5. Repeated or concurrent imports of the same normalized original module URL share the same pending promise and resolved module.
+6. Failed prefetches and imports are removed from their caches so the next call can retry, and cache-busting query strings remain part of the cache key.
 
 ## Publication
 

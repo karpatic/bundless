@@ -5,6 +5,7 @@ import { transformAST } from './bundless.utils.ast.transpiler.js';
 
 
 window.Bundless = {
+  ...window.Bundless,
   transformAST,
   transpileCode,
   cache: true,
@@ -101,4 +102,4 @@ document.addEventListener("DOMContentLoaded", async () => {
   for (let scriptTag of scriptTags) {
     await handleScriptTag(scriptTag);
   }
-}); 
+});

@@ -74,6 +74,7 @@ function isInImportMap(moduleName) {
 
 let dynamicImportList = false;
 const moduleImportCache = new Map();
+const moduleSourceCache = new Map();
 
 function normalizeModuleImportPath(path) {
   const modulePath = String(path);
@@ -84,24 +85,72 @@ function normalizeModuleImportPath(path) {
   }
 }
 
+function splitModuleImportPath(normalizedPath) {
+  return {
+    basePath: normalizedPath.split("/").slice(0, -1).join("/") + "/",
+    filename: normalizedPath.split("/").slice(-1)[0],
+  };
+}
+
+async function fetchModuleSource(normalizedPath) {
+  // console.log('fetching', normalizedPath);
+  const response = await fetch(normalizedPath);
+  if (!response.ok) {
+    console.error(`Failed to load ${normalizedPath}: ${response.statusText}`);
+    throw new Error(`Failed to load ${normalizedPath}`);
+  }
+
+  const code = await response.text();
+  return { code, ...splitModuleImportPath(normalizedPath) };
+}
+
+function getModuleSource(normalizedPath) {
+  const cachedSource = moduleSourceCache.get(normalizedPath);
+  if (cachedSource) {
+    return cachedSource;
+  }
+
+  const sourcePromise = fetchModuleSource(normalizedPath).catch((error) => {
+    moduleSourceCache.delete(normalizedPath);
+    throw error;
+  });
+  moduleSourceCache.set(normalizedPath, sourcePromise);
+  return sourcePromise;
+}
+
+function toModulePathList(paths) {
+  if (paths == null) {
+    throw new TypeError("Bundless.prefetch() requires a module URL or iterable of module URLs.");
+  }
+  if (typeof paths === "string") {
+    return [paths];
+  }
+  if (typeof paths[Symbol.iterator] === "function") {
+    return Array.from(paths);
+  }
+  return [paths];
+}
+
+async function prefetchModules(paths) {
+  const modulePaths = toModulePathList(paths);
+  await Promise.all(
+    modulePaths.map((path) => getModuleSource(normalizeModuleImportPath(path)))
+  );
+}
+
+window.Bundless = {
+  ...window.Bundless,
+  prefetch: prefetchModules,
+};
+
 async function loadModuleImport(normalizedPath) {
   // Store previous value and set new one for this import
   const previousDynamicImportList = dynamicImportList;
   dynamicImportList = [];
-  
-  let basePath = normalizedPath.split("/").slice(0, -1).join("/");
-  let filename = normalizedPath.split("/").slice(-1)[0];
-  
+
   try {
-    // console.log('fetching', normalizedPath);
-    const response = await fetch(normalizedPath);
-    if (!response.ok) {
-      console.error(`Failed to load ${normalizedPath}: ${response.statusText}`);
-      throw new Error(`Failed to load ${normalizedPath}`);
-    }
-    
-    const code = await response.text(); 
-    const transpiledCode = await window.Bundless.transpileCode(code, basePath+'/', filename);
+    const { code, basePath, filename } = await getModuleSource(normalizedPath);
+    const transpiledCode = await window.Bundless.transpileCode(code, basePath, filename);
     
     const blob = new Blob([transpiledCode], { type: "application/javascript" });
     const url = URL.createObjectURL(blob);
@@ -138,6 +187,7 @@ window.import = function (path) {
 
   const importPromise = loadModuleImport(normalizedPath).catch((error) => {
     moduleImportCache.delete(normalizedPath);
+    moduleSourceCache.delete(normalizedPath);
     throw error;
   });
   moduleImportCache.set(normalizedPath, importPromise);
@@ -636,6 +686,7 @@ function transformAST(ast, debug = {}) {
 }
 
 window.Bundless = {
+  ...window.Bundless,
   transformAST,
   transpileCode,
   cache: true,
