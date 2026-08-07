@@ -1,22 +1,57 @@
-# Build more, bundle less.
+# Build more. Bundle less.
 
-Create React apps without bundling.
+React JSX and TypeScript can run directly in the browser without a build step.
 
-React does not require a ceremony just to put a page on the web. Bundless makes ordinary HTML the entry point: serve files, load JSX, edit, refresh, done.
+Bundless starts with browser-native modules: serve HTML, load JSX or TSX, edit, refresh. When bundling becomes necessary, move the same application imports to Webpack. Bundling is an optimization and deployment decision, not a prerequisite for writing the app.
 
-**Bundless.js**: A 36kb browser shim that resolves and transpiles React JSX code at runtime.
+[Get Started](#get-started) · [Playground](https://bundless.dev/examples/playground.html) · [GitHub](https://github.com/karpatic/bundless)
 
-Bundless is especially good for multi-page React apps. Each ordinary HTML page can load the JSX it needs. Host the whole thing on any static file server, including GitHub Pages, edit app files directly in github.dev (GitHub's browser VS Code experience) or another editor, and ship without a local Node toolchain or application bundling/build step.
+## Get Started
 
-Bundless is an on-ramp, not a trap. When the project needs a full-fledged development environment, [`bundlessdev/webpack`](https://bundless.dev/examples/index.html#webpack) gives it a migration path instead of a Bundless-only architecture.
+Serve this file over HTTP:
 
-[Try it out](https://bundless.dev/examples/playground.html) · [Usage Docs](https://bundless.dev/examples/index.html) · [Benchmarks](https://bundless.dev/benchmarks/index.html)
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@17.0.2/es2022/react.mjs",
+          "react-dom": "https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="react-root"></div>
 
-## Getting Started
+    <script type="text/babel">
+      import React from "react";
+      import ReactDOM from "react-dom";
 
-Add Bundless to your page, then mark JSX with `type="text/jsx"` or `type="text/babel"`. Bundless transpiles it in the browser when the page loads.
+      function App() {
+        return (
+          <main>
+            <h1>Hello from Bundless</h1>
+            <p>React JSX is running without an app bundle.</p>
+          </main>
+        );
+      }
 
-### Runtime choices
+      ReactDOM.render(<App />, document.getElementById("react-root"));
+    </script>
+
+    <script src="/dist/bundless.acorn.min.js" type="module"></script>
+  </body>
+</html>
+```
+
+For a separate file, use the same imports in `App.jsx` and load it with `<script src="./App.jsx" type="text/jsx"></script>`. For TSX, load `bundless.sucrase.min.js` and keep the app script type as `text/jsx`.
+
+## Runtime Choices
 
 <strong><a href="/dist/bundless.acorn.min.js" target="_blank">Acorn</a>: 36Kb | default runtime | no runtime inline source maps</strong>
 
@@ -32,62 +67,16 @@ Add Bundless to your page, then mark JSX with `type="text/jsx"` or `type="text/b
 
 Use Sucrase when you need JSX and TypeScript syntax. Babel and Meriyah are also available; see the [Usage Docs](https://bundless.dev/examples/index.html) for working pages and the full build matrix.
 
-## Starter page
+## How It Works
 
-Use `type="text/jsx"` to load JSX from a file:
+1. Browser import maps resolve packages such as React.
+2. Bundless transforms `text/jsx` and `text/babel` scripts in the browser.
+3. Local JSX, JS, TS, and TSX app modules load through `window.import()`.
 
-```html
-<script src="./dist/bundless.acorn.min.js"></script>
-<script src="./App.jsx" type="text/jsx"></script>
-```
+Default imports use bundler-style interop: if a module owns a `default` export, Bundless uses it; otherwise the default binding falls back to the module namespace. Named imports stay named imports, namespace imports stay namespaces, and side-effect imports load only.
 
-Or write JSX directly in the page with `type="text/babel"`:
+## Move to Webpack
 
-```html
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@17.0.2/es2022/react.mjs",
-    "react-dom": "https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs"
-  }
-}
-</script>
+Bundless is an on-ramp, not a trap. Keep ordinary imports plus literal `window.import()` and `window.Bundless.prefetch()` calls, then add [`bundlessdev/webpack`](https://bundless.dev/examples/index.html#move-to-webpack) when runtime compilation, dependency control, CSP, or production performance starts to matter.
 
-<div id="react-root"></div>
-
-<script src="./dist/bundless.acorn.min.js"></script>
-<script type="text/babel">
-  import React from "react";
-  import * as ReactDOM from "react-dom";
-
-  function App() {
-    return <h1>Hello World</h1>;
-  }
-
-  ReactDOM.render(<App />, document.getElementById("react-root"));
-</script>
-```
-
-See more complete, working pages in the [Usage Docs](https://bundless.dev/examples/index.html), or open the [playground](https://bundless.dev/examples/playground.html).
-
-## Options
-
-- Add `to="preact"` to transpile React code to Preact.
-- Use an import map when your JSX imports packages such as React.
-- Modules can be prefetched with [`data-bundless-prefetch`](https://bundless.dev/examples/index.html#prefetching) or [`window.Bundless.prefetch()`](https://bundless.dev/examples/index.html#prefetching).
-
-That's it!
-
-## How it works
-
-1. Modules resolve through `<script type="importmap">`.
-2. Bundless transpiles JSX in `text/jsx` and `text/babel` scripts.
-3. Imports run in the browser as modules.
-
-## Memes
-
-<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
-    <img src="/memes/meme_what_gives_peope_feelings_of_power.jpg" style="width:300px;" />
-    <img src="/memes/meme_did_you_just_take_both_pills.jpeg" style="width:300px;" />
-    <img src="/memes/meme_left_exit_12_off_ramp.jpg" style="width:300px;" />
-</div>
+See [Usage Docs](https://bundless.dev/examples/index.html) for runtime behavior, prefetching, troubleshooting, runnable examples, and the full Webpack API reference.

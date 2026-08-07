@@ -4,18 +4,23 @@
     <meta charset="utf-8" />
     <title>Bundless Usage Docs</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Bundless Usage Docs for runtime JSX transpilation, prefetching, and troubleshooting." />
+    <meta name="description" content="Bundless Usage Docs for in-browser JSX and TypeScript transformation." />
     <style>
-      body { max-width: 960px; margin: 1em auto; padding: 0 1em; }
+      body { line-height: 1.45; margin: 1em auto; max-width: 960px; padding: 0 1em; }
+      h2 { margin-top: 1.75em; }
+      h3 { margin: 1.25em 0 .35em; }
       h4 { margin: .75em 0 .25em; }
       .example { margin: .5em 0; }
       .example summary { cursor: pointer; }
       .example-view { display: grid; gap: 1em; margin: .5em 0 1em; }
-      pre { border: 1px solid; margin: 0; max-height: 24em; overflow: auto; padding: .5em; white-space: pre-wrap; }
+      pre { border: 1px solid; margin: 0 0 1em; max-height: 24em; overflow: auto; padding: .5em; white-space: pre; }
       iframe { border: 1px solid; box-sizing: border-box; height: 24em; width: 100%; }
       .table-scroll { margin: .75em 0 1em; overflow-x: auto; }
-      table { border-collapse: collapse; min-width: 720px; width: 100%; }
+      table { border-collapse: collapse; width: 100%; }
+      .runtime-table { min-width: 620px; }
       th, td { border: 1px solid; padding: .5em; text-align: left; vertical-align: top; }
+      dt { font-weight: bold; margin-top: .75em; }
+      dd { margin: .25em 0 .75em 1.5em; }
       @media (min-width: 760px) {
         .example-view { grid-template-columns: 1fr 1fr; }
       }
@@ -24,31 +29,277 @@
   <body>
     <h1>Bundless Usage Docs</h1>
     <p>
-      Complete runnable examples for runtime JSX transpilation, prefetching, migration, and troubleshooting.
+      Build more. Bundle less. Bundless lets React JSX and TypeScript run directly in the
+      browser without a build step, then keeps a path to Webpack when bundling becomes a better
+      deployment choice.
     </p>
 
-    <h2>Site links:</h2>
-    <ul>
-      <li><a href="/index.html">Getting Started</a></li>
-      <li><a href="/benchmarks/index.html">Benchmarks</a></li>
-      <li><a href="./playground.html">Playground</a></li>
-    </ul>
+    <p>
+      <a href="/">Get Started</a> |
+      <a href="./playground.html">Playground</a> |
+      <a href="https://github.com/karpatic/bundless">GitHub</a> |
+      <a href="/benchmarks/index.html">Benchmarks</a>
+    </p>
 
-    <h2>Playground</h2>
-    <p><a href="./playground.html">Open the playground</a> to try Bundless in the browser.</p>
+    <h2 id="quick-start">Quick start</h2>
+    <p>Serve this file over HTTP. Bundless transforms the JSX script and appends a module script.</p>
+    <pre><code>&lt;!doctype html&gt;
+&lt;html lang="en"&gt;
+  &lt;head&gt;
+    &lt;meta charset="utf-8"&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;
+    &lt;script type="importmap"&gt;
+      {
+        "imports": {
+          "react": "https://esm.sh/react@17.0.2/es2022/react.mjs",
+          "react-dom": "https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs"
+        }
+      }
+    &lt;/script&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;div id="react-root"&gt;&lt;/div&gt;
+
+    &lt;script type="text/babel"&gt;
+      import React from "react";
+      import ReactDOM from "react-dom";
+
+      function App() {
+        return &lt;h1&gt;Hello from Bundless&lt;/h1&gt;;
+      }
+
+      ReactDOM.render(&lt;App /&gt;, document.getElementById("react-root"));
+    &lt;/script&gt;
+
+    &lt;script src="/dist/bundless.acorn.min.js" type="module"&gt;&lt;/script&gt;
+  &lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+    <h2>React example</h2>
+    <p>Use <code>type="text/jsx"</code> for an external JSX file.</p>
+    <pre><code>&lt;script src="./App.jsx" type="text/jsx"&gt;&lt;/script&gt;
+&lt;script src="/dist/bundless.acorn.min.js" type="module"&gt;&lt;/script&gt;</code></pre>
+    <details class="example" data-url="/examples/acorn.html">
+      <summary>React JSX Source + Output</summary>
+    </details>
+
+    <h2>TypeScript/TSX example</h2>
+    <p>
+      Use Sucrase for TypeScript or TSX, and still mark the app script as
+      <code>type="text/jsx"</code>. The runtime scans <code>text/jsx</code> and
+      <code>text/babel</code>; it does not scan <code>text/tsx</code>.
+    </p>
+    <pre><code>&lt;script src="./tsx-app.tsx" type="text/jsx"&gt;&lt;/script&gt;
+&lt;script src="/dist/bundless.sucrase.min.js" type="module"&gt;&lt;/script&gt;</code></pre>
+    <details class="example" data-url="/examples/tsx.html">
+      <summary>TSX Source + Output</summary>
+    </details>
+
+    <h2>Runtime/import behavior</h2>
+    <h3>HTML scripts</h3>
+    <p>
+      Put app code in an external or inline script with <code>type="text/jsx"</code> or
+      <code>type="text/babel"</code>, then load one Bundless runtime. On document ready, Bundless
+      fetches external scripts or reads inline scripts, transforms the code, and appends module
+      scripts to the page.
+    </p>
+
+    <h3>Import maps and package imports</h3>
+    <p>
+      Add an import map for bare imports such as <code>react</code> and <code>react-dom</code>.
+      Default imports use bundler-style interop: Bundless binds to the module's own
+      <code>default</code> export when that property exists, and otherwise falls back to the module
+      namespace. Falsy defaults such as <code>false</code> and <code>null</code> are preserved.
+    </p>
+    <p>
+      Named imports remain strict, namespace imports bind to the module namespace, and side-effect
+      imports load the module without creating a binding.
+    </p>
+    <pre><code>&lt;script type="importmap"&gt;
+  {
+    "imports": {
+      "react": "https://esm.sh/react@17.0.2/es2022/react.mjs",
+      "react-dom": "https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs"
+    }
+  }
+&lt;/script&gt;</code></pre>
+
+    <h3>Local app modules</h3>
+    <p>
+      Local static imports with <code>.mjs</code>, <code>.js</code>, <code>.jsx</code>,
+      <code>.ts</code>, or <code>.tsx</code> extensions are resolved against the current file and
+      loaded through <code>window.import()</code>. Cache-busting query strings remain part of the
+      module cache key.
+    </p>
+    <pre><code>import React from "react";
+import Counter from "./Counter.jsx";
+import "./analytics.js";
+
+export default function App() {
+  return &lt;Counter /&gt;;
+}</code></pre>
+
+    <h3><code>window.import(url)</code></h3>
+    <pre><code>const module = await window.import("./Dialog.jsx");
+module.openDialog();</code></pre>
+    <p>
+      <code>window.import()</code> normalizes the URL, fetches the source, transforms it, evaluates
+      it as a blob module, and resolves to the module namespace. Concurrent and repeated imports for
+      the same normalized URL share the same promise and resolved module; failed imports are evicted
+      so a later call can retry.
+    </p>
 
     <h2 id="prefetching">Prefetching</h2>
+    <h3><code>window.Bundless.prefetch(urlOrUrls)</code></h3>
+    <pre><code>await window.Bundless.prefetch(["./Dialog.jsx", "./Settings.jsx"]);</code></pre>
     <p>
-      Declarative <code>&lt;script type="application/json" data-bundless-prefetch&gt;</code> lists module URLs that Bundless fetches and transpiles without evaluating; later <code>window.import()</code> calls reuse that prepared code.
-      <code>window.Bundless.prefetch()</code> accepts one URL or an iterable of URLs and warms the source-fetch cache.
+      Use this when you know a module will probably be imported soon. It fetches and warms the
+      source cache only; it does not transform, evaluate, or resolve to a module namespace.
+    </p>
+
+    <h3><code>data-bundless-prefetch</code></h3>
+    <pre><code>&lt;script type="application/json" data-bundless-prefetch&gt;
+  [
+    "./Dialog.jsx",
+    "./Settings.jsx"
+  ]
+&lt;/script&gt;</code></pre>
+    <p>
+      Use this for startup preparation from HTML. The JSON must be an array of module URL strings.
+      Bundless fetches and transpiles the listed modules without evaluating them; a later
+      <code>window.import()</code> call reuses the prepared code and then evaluates the module.
     </p>
     <details class="example" data-url="/examples/prefetch.html">
-      <summary>Prefetch + Acorn React</summary>
+      <summary>Prefetch Source + Output</summary>
+    </details>
+
+    <h2>Runtime choices</h2>
+    <div class="table-scroll">
+      <table class="runtime-table">
+        <thead>
+          <tr>
+            <th>Runtime</th>
+            <th>Pick it when</th>
+            <th>Builds</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>Acorn</code></td>
+            <td>Use this as the recommended small default for JSX pages.</td>
+            <td>
+              Acorn 36Kb; <code>/dist/bundless.acorn.min.js</code> is the package/browser default and omits runtime inline source maps.
+              <code>/dist/bundless.acorn.prod.js</code> is the Terser-minified production build.
+              <code>/dist/bundless.acorn.dev.js</code> and <code>bundlessdev/acorn/dev</code> include runtime inline source maps for JSX debugging.
+            </td>
+          </tr>
+          <tr>
+            <td><code>Meriyah</code></td>
+            <td>Use this when you want the alternate JSX parser.</td>
+            <td>
+              <code>/dist/bundless.meriyah.min.js</code> omits runtime inline source maps.
+              <code>/dist/bundless.meriyah.prod.js</code> is the Terser-minified production build.
+              <code>/dist/bundless.meriyah.dev.js</code> includes runtime inline source maps for JSX debugging.
+            </td>
+          </tr>
+          <tr>
+            <td><code>Babel</code></td>
+            <td>Use this when you need broader Babel standalone syntax coverage in the browser.</td>
+            <td>
+              <code>/dist/bundless.babel.min.js</code> and <code>bundlessdev/babel</code> are the single Babel runtime build.
+              It loads Babel standalone from cdnjs when needed and emits Babel inline source maps.
+            </td>
+          </tr>
+          <tr>
+            <td><code>Sucrase</code></td>
+            <td>Use this for JSX plus TypeScript or TSX.</td>
+            <td>
+              Sucrase 52Kb; <code>/dist/bundless.sucrase.min.js</code> and <code>bundlessdev/sucrase</code> are the single Sucrase runtime build.
+              It emits Sucrase inline source maps. Load <code>.tsx</code> files with <code>type="text/jsx"</code>.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Add <code>to="preact"</code> to the Acorn, Meriyah, or Sucrase runtime tag to target Preact.</p>
+    <pre><code>&lt;script src="./App.jsx" type="text/jsx"&gt;&lt;/script&gt;
+&lt;script src="/dist/bundless.sucrase.min.js" type="module" to="preact"&gt;&lt;/script&gt;</code></pre>
+    <h3>More runtime examples</h3>
+    <p>Each disclosure fetches the page source and runs the same URL in an iframe.</p>
+    <details class="example" data-url="/examples/acorn_speed_test.html">
+      <summary>Acorn speed test Source + Output</summary>
+    </details>
+    <details class="example" data-url="/examples/acorn%20debug.html">
+      <summary>Acorn dev source maps Source + Output</summary>
+    </details>
+    <details class="example" data-url="/examples/acorn_preact.html">
+      <summary>Acorn to Preact Source + Output</summary>
+    </details>
+    <details class="example" data-url="/examples/meriyah.html">
+      <summary>Meriyah React Source + Output</summary>
+    </details>
+    <details class="example" data-url="/examples/meriyah%20debug.html">
+      <summary>Meriyah dev source maps Source + Output</summary>
+    </details>
+    <details class="example" data-url="/examples/meriyah_preact.html">
+      <summary>Meriyah to Preact Source + Output</summary>
+    </details>
+    <details class="example" data-url="/examples/babel.html">
+      <summary>Babel React Source + Output</summary>
+    </details>
+    <details class="example" data-url="/examples/sucrase.html">
+      <summary>Sucrase React Source + Output</summary>
+    </details>
+    <details class="example" data-url="/examples/sucrase%20debug.html">
+      <summary>Sucrase debug component Source + Output</summary>
+    </details>
+    <details class="example" data-url="/examples/sucrase_preact.html">
+      <summary>Sucrase to Preact Source + Output</summary>
+    </details>
+
+    <h2>Playground / benchmarks</h2>
+    <p>
+      Open the <a href="./playground.html">Playground</a> to type JSX, transpile it in the browser,
+      and inspect the generated module output. Use the <a href="/benchmarks/index.html">benchmarks</a>
+      for quick runtime comparisons.
+    </p>
+    <details class="example" data-url="/examples/playground.html">
+      <summary>Playground Source + Output</summary>
     </details>
 
     <h2>Troubleshooting</h2>
+    <h3>Modern browser surface</h3>
+    <p>
+      Bundless depends on modern browser features: ES modules, dynamic <code>import()</code>,
+      <code>fetch()</code>, blob module URLs, top-level <code>await</code>, and import maps when
+      you use bare imports.
+    </p>
+
+    <h3>Production constraints</h3>
+    <p>
+      Runtime transformation means the browser fetches and compiles application source before the
+      app is fully ready. That can be fine for prototypes, small internal tools, docs, demos, and
+      static multi-page apps, but it is real startup work and should be measured on the devices and
+      networks you care about.
+    </p>
+    <p>
+      Restrictive CSPs may block Bundless because it inserts inline module code and
+      <code>window.import()</code> evaluates transformed modules through <code>blob:</code> URLs.
+      If your runtime, React imports, or application modules come from another origin, your policy
+      also has to allow those fetches and module loads. Cross-origin source files must return CORS
+      headers that allow your page to read them.
+    </p>
+
+    <h3>Source-map payload</h3>
+    <p>
+      Acorn and Meriyah <code>.dev.js</code> builds include runtime inline source maps for easier
+      debugging. Their <code>.min.js</code> and <code>.prod.js</code> builds omit runtime inline
+      source maps to avoid production size and runtime overhead. Babel and Sucrase have their own
+      single-build source-map behavior, described in the runtime table.
+    </p>
+
     <h3>Preact mode</h3>
-    <p>Add <code>to="preact"</code> to the Bundless script tag to transpile React code toward Preact.</p>
+    <p>Add <code>to="preact"</code> to a supported Bundless runtime tag to transpile React-style code toward Preact.</p>
     <ul>
       <li>Preact portals require a concrete DOM element.</li>
       <li>Preact context consumers need a matching provider.</li>
@@ -56,25 +307,22 @@
       <li>Refs can differ by pattern; check whether you received a DOM node or a <code>.current</code> object before calling <code>focus()</code>.</li>
     </ul>
 
-    <h3>ReactDOM imports</h3>
-    <p>
-      Default imports are currently resolved from <code>module.default</code>, so <code>import ReactDOM from "react-dom"</code> can fail.
-      Prefer named APIs such as <code>import { render } from "react-dom"</code> or <code>import { createRoot } from "react-dom/client"</code>.
-      Namespace imports such as <code>import * as ReactDOM from "react-dom"</code> are also appropriate for runtime paths that preserve namespace imports.
-    </p>
-
     <h3>Babel standalone</h3>
-    <blockquote>
-      You should use a build system running on Node.js, such as Webpack, Rollup, or Parcel, to transpile your JS ahead of time.
-      <a href="https://babeljs.io/docs/babel-standalone">Babel Docs</a>
-    </blockquote>
-
-    <h2 id="webpack">Move to Webpack</h2>
     <p>
-      Bundless is an on-ramp to Webpack: normal application modules can keep literal <code>window.import()</code> calls and supported <code>window.Bundless.prefetch()</code> calls while Webpack takes over resolution and chunking.
-      The plugin does not replace the project's Babel, SWC, esbuild, or TypeScript JSX loader; keep that loader in the normal module pipeline.
+      The Babel runtime is useful when you need Babel standalone coverage in the browser, but Babel's
+      own standalone docs recommend a Node-based build system for production transpilation. Treat it
+      as a convenience path, then move to Webpack when production constraints show up.
+      <a href="https://babeljs.io/docs/babel-standalone">Babel standalone docs</a>
     </p>
-    <pre><code>const BundlessWebpackPlugin = require("bundlessdev/webpack");
+
+    <h2 id="move-to-webpack">Move to Webpack</h2>
+    <p>
+      Webpack is the escape hatch: keep literal <code>window.import()</code> calls and supported
+      <code>window.Bundless.prefetch()</code> calls in your app, then add a build when runtime work,
+      dependency control, or deployment policy calls for one.
+    </p>
+    <pre><code>const path = require("node:path");
+const BundlessWebpackPlugin = require("bundlessdev/webpack");
 
 module.exports = {
   entry: "./src/index.jsx",
@@ -92,120 +340,107 @@ module.exports = {
       },
     ],
   },
-  plugins: [new BundlessWebpackPlugin()],
-};
-</code></pre>
+  plugins: [
+    new BundlessWebpackPlugin({
+      include: path.resolve(__dirname, "src"),
+      prefetch: "webpack",
+      stripHtmlRuntime: true,
+    }),
+  ],
+};</code></pre>
 
-    <h3>Plugin Options</h3>
-    <div class="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>Option</th>
-            <th>Accepted values/default</th>
-            <th>What it does</th>
-            <th>When to use</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>loader</code></td>
-            <td>Enabled by default; set exactly <code>false</code> to disable.</td>
-            <td>Adds the Bundless Webpack loader as an <code>enforce: "pre"</code> rule using the configured <code>test</code>, <code>include</code>, <code>exclude</code>, <code>parserPlugins</code>, and <code>prefetch</code> values.</td>
-            <td>Leave enabled for automatic <code>window.import()</code> and <code>window.Bundless.prefetch()</code> transforms. Disable when manually wiring the loader rule.</td>
-          </tr>
-          <tr>
-            <td><code>test</code></td>
-            <td>Any Webpack rule <code>test</code> value; default <code>/\.[cm]?[jt]sx?$/</code>.</td>
-            <td>Selects the files that receive the pre-loader when <code>loader !== false</code>.</td>
-            <td>Change only when your application stores Bundless calls in a narrower or wider module set.</td>
-          </tr>
-          <tr>
-            <td><code>include</code></td>
-            <td>Unset by default; any truthy Webpack rule <code>include</code> value.</td>
-            <td>Adds <code>rule.include</code> to the generated pre-loader rule.</td>
-            <td>Use to limit transforms to application source folders.</td>
-          </tr>
-          <tr>
-            <td><code>exclude</code></td>
-            <td>Default <code>/node_modules/</code>; any truthy Webpack rule <code>exclude</code> value. A falsey override omits <code>rule.exclude</code>.</td>
-            <td>Adds <code>rule.exclude</code> to the generated pre-loader rule.</td>
-            <td>Keep the default for normal apps. Override only when Bundless calls live in code the default excludes.</td>
-          </tr>
-          <tr>
-            <td><code>parserPlugins</code></td>
-            <td>Unset by default; extra Babel parser plugin entries.</td>
-            <td>Appends parser plugins to the loader's built-in parser set. Resource paths matching <code>/\.[cm]?tsx?$/</code> also receive the Babel <code>typescript</code> parser plugin.</td>
-            <td>Add when your syntax is not covered by the built-in parser plugins.</td>
-          </tr>
-          <tr>
-            <td><code>prefetch</code></td>
-            <td><code>"webpack"</code> by default; <code>"noop"</code>.</td>
-            <td><code>"webpack"</code> turns supported source-level <code>window.Bundless.prefetch()</code> calls into Webpack prefetch hints and a resolved promise. <code>"noop"</code> returns a resolved promise without hints.</td>
-            <td>Use <code>"webpack"</code> for Webpack-managed prefetching. Use <code>"noop"</code> to keep the async call shape without generating hints.</td>
-          </tr>
-          <tr>
-            <td><code>runtime</code></td>
-            <td><code>false</code> by default; exact <code>false</code> installs false aliases. Any other value skips alias installation.</td>
-            <td>When exactly <code>false</code>, calls the runtime-alias step so Webpack resolves configured Bundless runtime imports to <code>false</code>.</td>
-            <td>Keep the default after moving runtime work into Webpack. Use a non-false value only if the bundle still needs Bundless runtime imports.</td>
-          </tr>
-          <tr>
-            <td><code>runtimeAliases</code></td>
-            <td>Unset uses the built-in alias map when <code>runtime === false</code>; a custom object replaces the built-ins.</td>
-            <td>Merges aliases before existing <code>resolve.alias</code> entries, so aliases already present in the Webpack config win.</td>
-            <td>Use only when the default runtime exclusions are too broad or too narrow.</td>
-          </tr>
-          <tr>
-            <td><code>stripHtmlRuntime</code></td>
-            <td><code>true</code> by default; set exactly <code>false</code> to disable.</td>
-            <td>Hooks HtmlWebpackPlugin when present. It filters Bundless runtime script tags, Bundless source script tags, and unignored Bundless prefetch tags from HtmlWebpackPlugin tag groups, and removes unignored declarative prefetch script blocks before emit.</td>
-            <td>Leave enabled when HtmlWebpackPlugin is producing HTML that still contains Bundless bootstrap tags. Disable if you intentionally keep those tags.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <h3>Migration checklist</h3>
+    <ul>
+      <li>Keep ordinary application imports, literal <code>window.import()</code> calls, and supported source-level <code>window.Bundless.prefetch()</code> calls.</li>
+      <li>Configure a normal Webpack entry and the project's JSX or TypeScript loader.</li>
+      <li>Add <code>new BundlessWebpackPlugin()</code> to <code>plugins</code>.</li>
+      <li>Remove browser bootstrap and source script tags, or let HtmlWebpackPlugin stripping handle generated tags.</li>
+      <li>Move declarative prefetch JSON to source-level <code>window.Bundless.prefetch()</code> calls when Webpack hints are wanted.</li>
+    </ul>
+
+    <h3>How the pieces fit</h3>
     <p>
-      Default runtime aliases when <code>runtime === false</code>: <code>bundlessdev</code>, <code>bundlessdev/acorn</code>, <code>bundlessdev/acorn/dev</code>, <code>bundlessdev/babel</code>, <code>bundlessdev/meriyah</code>, and <code>bundlessdev/sucrase</code> are aliased to <code>false</code>.
-      Existing Webpack <code>resolve.alias</code> entries win because the plugin aliases are merged first.
+      The plugin is the normal migration path: it adds the Bundless pre-loader, aliases browser
+      runtime imports away by default, and strips Bundless bootstrap tags from HtmlWebpackPlugin
+      output when HtmlWebpackPlugin is present. The loader is only the source rewrite step, useful
+      when you want manual rule placement. Neither the plugin nor the loader transpiles JSX or
+      TypeScript for your bundle; keep your normal Babel, SWC, esbuild, or TypeScript loader.
     </p>
 
-    <h3>HTML Behavior</h3>
-    <div class="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>HTML input</th>
-            <th>Default behavior</th>
-            <th>Important limit</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Bundless runtime <code>&lt;script src="...bundless.acorn...js"&gt;</code>, <code>babel</code>, <code>meriyah</code>, or <code>sucrase</code> tags in HtmlWebpackPlugin tag groups</td>
-            <td>Removed when <code>stripHtmlRuntime !== false</code> and HtmlWebpackPlugin is present.</td>
-            <td><code>data-webpack-ignore</code> does not preserve runtime script tags.</td>
-          </tr>
-          <tr>
-            <td>Source tags with <code>type="text/jsx"</code>, <code>type="text/tsx"</code>, <code>type="text/babel"</code>, or the matching <code>application/*</code> forms in HtmlWebpackPlugin tag groups</td>
-            <td>Removed when <code>stripHtmlRuntime !== false</code> and HtmlWebpackPlugin is present.</td>
-            <td>The plugin does not turn source script tags into Webpack modules; use normal Webpack entries and loaders.</td>
-          </tr>
-          <tr>
-            <td><code>&lt;script type="application/json" data-bundless-prefetch&gt;</code> blocks</td>
-            <td>Declarative prefetch contents are stripped by default when <code>stripHtmlRuntime !== false</code>.</td>
-            <td>They are not converted into Webpack hints. Source-level <code>window.Bundless.prefetch()</code> calls are what the loader converts.</td>
-          </tr>
-          <tr>
-            <td><code>data-webpack-ignore</code> on a <code>data-bundless-prefetch</code> script</td>
-            <td>Preserves that prefetch block.</td>
-            <td>This escape hatch only preserves prefetch blocks; it does not preserve runtime or source script tags.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <h3>What happens to source calls?</h3>
+    <p>
+      When <code>window</code> is not lexically shadowed, <code>window.import("./Dialog.jsx")</code>
+      is rewritten to native <code>import("./Dialog.jsx")</code>, so Webpack owns resolution,
+      chunks, and runtime loading. Use literal strings for imports you expect Webpack to split
+      cleanly; dynamic arguments follow Webpack's normal dynamic-import limits.
+    </p>
+    <p>
+      With the default <code>prefetch: "webpack"</code>,
+      <code>window.Bundless.prefetch("./Dialog.jsx")</code> or an array literal of string entries
+      becomes Webpack prefetch hints plus a resolved promise. Unsupported or dynamic prefetch
+      arguments become a resolved promise with no hint, and transformed prefetch calls do not
+      evaluate modules.
+    </p>
 
-    <h3>Transformer Limits</h3>
+    <h3>What happens to HTML?</h3>
+    <p>
+      With <code>stripHtmlRuntime: true</code>, HtmlWebpackPlugin output drops Bundless runtime
+      script tags, Bundless source script tags, and unignored <code>data-bundless-prefetch</code>
+      blocks. Declarative prefetch JSON is not converted into Webpack hints; move wanted hints into
+      source-level <code>window.Bundless.prefetch()</code> calls. A
+      <code>data-webpack-ignore</code> attribute preserves only declarative prefetch blocks, not
+      runtime or source script tags.
+    </p>
+
+    <h2>Webpack API reference</h2>
+    <h3>Advanced options</h3>
+    <dl>
+      <dt><code>loader</code></dt>
+      <dd>Default: enabled because the option is unset. Set exactly <code>false</code> to skip the automatic <code>enforce: "pre"</code> loader rule.</dd>
+
+      <dt><code>test</code></dt>
+      <dd>Default: <code>/\.[cm]?[jt]sx?$/</code>. Used as the generated pre-loader rule's <code>test</code>.</dd>
+
+      <dt><code>include</code></dt>
+      <dd>Default: unset. When truthy, copied to the generated pre-loader rule's <code>include</code>.</dd>
+
+      <dt><code>exclude</code></dt>
+      <dd>Default: <code>/node_modules/</code>. When truthy, copied to the generated pre-loader rule's <code>exclude</code>; a falsey override omits <code>exclude</code>.</dd>
+
+      <dt><code>parserPlugins</code></dt>
+      <dd>
+        Default: unset. Entries are appended to the built-in Babel parser plugins:
+        <code>jsx</code>, <code>dynamicImport</code>, <code>importMeta</code>,
+        <code>topLevelAwait</code>, <code>classProperties</code>,
+        <code>classPrivateProperties</code>, <code>classPrivateMethods</code>,
+        <code>objectRestSpread</code>, <code>optionalChaining</code>,
+        <code>nullishCoalescingOperator</code>, <code>numericSeparator</code>,
+        <code>logicalAssignment</code>, and <code>importAttributes</code>.
+        Files matching <code>/\.[cm]?tsx?$/</code> also receive <code>typescript</code>.
+      </dd>
+
+      <dt><code>prefetch</code></dt>
+      <dd>Default: <code>"webpack"</code>. Use <code>"webpack"</code> for Webpack prefetch hints from supported literal calls, or <code>"noop"</code> to keep the promise shape without hints.</dd>
+
+      <dt><code>runtime</code></dt>
+      <dd>Default: <code>false</code>. When exactly <code>false</code>, the plugin installs runtime aliases to <code>false</code>; any other value skips alias installation.</dd>
+
+      <dt><code>runtimeAliases</code></dt>
+      <dd>
+        Default: unset. When <code>runtime === false</code>, unset uses the built-in alias map:
+        <code>bundlessdev$</code>, <code>bundlessdev/acorn$</code>,
+        <code>bundlessdev/acorn/dev$</code>, <code>bundlessdev/babel$</code>,
+        <code>bundlessdev/meriyah$</code>, and <code>bundlessdev/sucrase$</code>
+        all resolve to <code>false</code>. Supplying <code>runtimeAliases</code> replaces that map.
+        The plugin merges these aliases before existing <code>resolve.alias</code> entries, so
+        aliases already in your config win.
+      </dd>
+
+      <dt><code>stripHtmlRuntime</code></dt>
+      <dd>Default: <code>true</code>. Set exactly <code>false</code> to stop HtmlWebpackPlugin stripping of Bundless runtime tags, Bundless source tags, and unignored declarative prefetch blocks.</dd>
+    </dl>
+
+    <h3>Transformer limits</h3>
     <ul>
       <li>The transformer does not transform calls when <code>window</code> is lexically shadowed.</li>
       <li><code>window.import()</code> rewrites its callee to native <code>import()</code> and therefore uses Webpack dynamic-import semantics.</li>
@@ -214,285 +449,56 @@ module.exports = {
       <li>Transformed prefetch calls do not evaluate modules.</li>
     </ul>
 
-    <h3>Public API</h3>
-    <h4><code>new BundlessWebpackPlugin(options)</code></h4>
-    <div class="table-scroll">
-      <table>
-        <tbody>
-          <tr>
-            <th>What</th>
-            <td>The default export from <code>bundlessdev/webpack</code>, also available as <code>require("bundlessdev/webpack").BundlessWebpackPlugin</code>.</td>
-          </tr>
-          <tr>
-            <th>How</th>
-            <td>Stores options by applying plugin defaults, then overlaying the supplied <code>options</code> object.</td>
-          </tr>
-          <tr>
-            <th>When to use</th>
-            <td>Add to <code>plugins</code> for the standard migration path.</td>
-          </tr>
-          <tr>
-            <th>Result/important limit</th>
-            <td>Installs behavior only when Webpack calls <code>apply()</code>; it does not replace the app's normal JSX, TypeScript, Babel, SWC, or esbuild loader.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <h3>Public Webpack exports</h3>
+    <h4><code>BundlessWebpackPlugin</code></h4>
+    <pre><code>const BundlessWebpackPlugin = require("bundlessdev/webpack");
 
-    <h4><code>plugin.apply(compiler)</code></h4>
-    <div class="table-scroll">
-      <table>
-        <tbody>
-          <tr>
-            <th>What</th>
-            <td>The Webpack lifecycle method for the plugin. Users do not call it directly.</td>
-          </tr>
-          <tr>
-            <th>How</th>
-            <td>Webpack passes the compiler. The method adds the pre-loader unless <code>loader === false</code>, installs runtime aliases when <code>runtime === false</code>, and hooks HtmlWebpackPlugin unless <code>stripHtmlRuntime === false</code>.</td>
-          </tr>
-          <tr>
-            <th>When to use</th>
-            <td>Use indirectly by putting a plugin instance in <code>plugins</code>.</td>
-          </tr>
-          <tr>
-            <th>Result/important limit</th>
-            <td>Mutates Webpack options and hooks the compilation; it is not an application runtime API.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+module.exports = {
+  plugins: [new BundlessWebpackPlugin()],
+};</code></pre>
+    <p>
+      This is the standard export and standard use. Webpack calls the plugin lifecycle internally
+      during the build.
+    </p>
 
     <h4><code>bundlessWebpack(config, options)</code></h4>
-    <div class="table-scroll">
-      <table>
-        <tbody>
-          <tr>
-            <th>What</th>
-            <td>A named helper export from <code>bundlessdev/webpack</code>.</td>
-          </tr>
-          <tr>
-            <th>How</th>
-            <td>Returns a shallow copy of <code>config</code> with <code>new BundlessWebpackPlugin(options)</code> appended to <code>plugins</code>.</td>
-          </tr>
-          <tr>
-            <th>When to use</th>
-            <td>Use when a config factory or wrapper style is more convenient than editing the <code>plugins</code> array directly.</td>
-          </tr>
-          <tr>
-            <th>Result/important limit</th>
-            <td>It does not deep-merge config objects; it preserves existing plugins by spreading <code>config.plugins || []</code>.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <pre><code>const { bundlessWebpack } = require("bundlessdev/webpack");
 
-    <h4><code>bundlessdev/webpack/loader</code> and <code>require("bundlessdev/webpack").loader</code></h4>
-    <div class="table-scroll">
-      <table>
-        <tbody>
-          <tr>
-            <th>What</th>
-            <td>The package loader export and the loader path exported from <code>bundlessdev/webpack</code>.</td>
-          </tr>
-          <tr>
-            <th>How</th>
-            <td>The plugin wires this loader with <code>enforce: "pre"</code>. Manual wiring should also use <code>enforce: "pre"</code> so Bundless calls are rewritten before normal transpilation.</td>
-          </tr>
-          <tr>
-            <th>When to use</th>
-            <td>Use manually when <code>loader: false</code> is set on the plugin or when the transform needs custom Webpack rule placement.</td>
-          </tr>
-          <tr>
-            <th>Result/important limit</th>
-            <td>The loader marks itself cacheable, skips files that do not include the sentinel strings it needs, and returns transformed code only for supported Bundless calls.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <pre><code>{
-  enforce: "pre",
-  test: /\.[cm]?[jt]sx?$/,
-  exclude: /node_modules/,
-  use: {
-    loader: require("bundlessdev/webpack").loader,
-    options: {
-      prefetch: "webpack",
-    },
+module.exports = bundlessWebpack(
+  {
+    entry: "./src/index.jsx",
   },
-}
-</code></pre>
-
-    <h4><code>window.import(specifier)</code> under the plugin</h4>
-    <div class="table-scroll">
-      <table>
-        <tbody>
-          <tr>
-            <th>What</th>
-            <td>A Bundless runtime import call that the loader recognizes in source modules.</td>
-          </tr>
-          <tr>
-            <th>How</th>
-            <td>When <code>window</code> is not lexically shadowed, the transformer rewrites the callee from <code>window.import</code> to native <code>import</code>.</td>
-          </tr>
-          <tr>
-            <th>When to use</th>
-            <td>Keep existing application calls during migration so Webpack can own the dynamic import.</td>
-          </tr>
-          <tr>
-            <th>Result/important limit</th>
-            <td>The resulting call follows Webpack dynamic-import semantics, including Webpack's own handling of specifiers and chunks.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h4><code>window.Bundless.prefetch(urlOrUrls)</code> under the plugin</h4>
-    <div class="table-scroll">
-      <table>
-        <tbody>
-          <tr>
-            <th>What</th>
-            <td>A Bundless source-level prefetch call that the loader can turn into Webpack prefetch hints.</td>
-          </tr>
-          <tr>
-            <th>How</th>
-            <td>With <code>prefetch: "webpack"</code>, a string literal or array literal string entries become Webpack dynamic imports marked with <code>webpackPrefetch: true</code>, followed by a resolved <code>Promise</code>.</td>
-          </tr>
-          <tr>
-            <th>When to use</th>
-            <td>Use for prefetch lists that should become Webpack-managed hints.</td>
-          </tr>
-          <tr>
-            <th>Result/important limit</th>
-            <td>Unsupported or dynamic arguments produce a resolved <code>Promise</code> with no hint; <code>prefetch: "noop"</code> does the same. Transformed prefetch calls do not evaluate modules.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h4>Declarative <code>data-bundless-prefetch</code></h4>
-    <div class="table-scroll">
-      <table>
-        <tbody>
-          <tr>
-            <th>What</th>
-            <td>The HTML API used by the browser runtime for declarative prefetch lists.</td>
-          </tr>
-          <tr>
-            <th>How</th>
-            <td>The plugin treats matching script tags as Bundless HTML bootstrap content and strips unignored blocks by default.</td>
-          </tr>
-          <tr>
-            <th>When to use</th>
-            <td>Keep only when that HTML block is intentionally still needed outside the Webpack hint path.</td>
-          </tr>
-          <tr>
-            <th>Result/important limit</th>
-            <td>Declarative prefetch blocks are not converted into Webpack hints. Move wanted hints to source-level <code>window.Bundless.prefetch()</code> calls.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h4><code>data-webpack-ignore</code></h4>
-    <div class="table-scroll">
-      <table>
-        <tbody>
-          <tr>
-            <th>What</th>
-            <td>An HTML escape hatch for a <code>data-bundless-prefetch</code> script block.</td>
-          </tr>
-          <tr>
-            <th>How</th>
-            <td>When the attribute is present on a Bundless prefetch script, the plugin's tag and HTML stripping checks leave that prefetch block in place.</td>
-          </tr>
-          <tr>
-            <th>When to use</th>
-            <td>Use for a declarative prefetch block that must survive HtmlWebpackPlugin output.</td>
-          </tr>
-          <tr>
-            <th>Result/important limit</th>
-            <td>It only preserves prefetch blocks. It does not preserve Bundless runtime tags, source script tags, or create Webpack prefetch hints.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>Migration Checklist</h3>
-    <ul>
-      <li>Retain normal application imports, literal <code>window.import()</code> calls, and supported source-level <code>window.Bundless.prefetch()</code> calls.</li>
-      <li>Configure a normal Webpack entry and the project's JSX or TypeScript loader.</li>
-      <li>Add <code>new BundlessWebpackPlugin()</code> to <code>plugins</code>.</li>
-      <li>Remove browser bootstrap and source script tags, or let HtmlWebpackPlugin stripping handle generated tags.</li>
-      <li>Migrate declarative prefetch lists to source-level <code>window.Bundless.prefetch()</code> calls when Webpack hints are wanted.</li>
-    </ul>
-
-    <h2>Runtime Transpilation</h2>
+  {
+    include: require("node:path").resolve(__dirname, "src"),
+  }
+);</code></pre>
     <p>
-      These pages demonstrate React code transpiled at runtime to ES6-compatible React or Preact code using Bundless runtime builds.
-      To use Preact instead of React, include <code>to="preact"</code> in the script tag.
+      This helper returns a shallow copy of <code>config</code> with
+      <code>new BundlessWebpackPlugin(options)</code> appended to <code>plugins</code>.
     </p>
 
-    <h2>Acorn</h2>
+    <h4><code>bundlessdev/webpack/loader</code></h4>
+    <pre><code>module.exports = {
+  module: {
+    rules: [
+      {
+        enforce: "pre",
+        test: /\.[cm]?[jt]sx?$/,
+        exclude: /node_modules/,
+        use: {
+          loader: "bundlessdev/webpack/loader",
+          options: {
+            prefetch: "webpack",
+          },
+        },
+      },
+    ],
+  },
+};</code></pre>
     <p>
-      Acorn 36Kb; <code>bundless.acorn.min.js</code> is the default production-mode package/browser build without runtime inline maps.
-      <code>bundless.acorn.prod.js</code> is the Terser-minified production option for the smallest deployment.
-      <code>bundless.acorn.dev.js</code> keeps development behavior and runtime inline source maps so browser debugging points back to JSX.
+      Use the loader manually only when <code>loader: false</code> is set on the plugin or when
+      the transform needs custom rule placement.
     </p>
-    <details class="example" data-url="/examples/acorn_speed_test.html">
-      <summary>Acorn Speed Test</summary>
-    </details>
-    <details class="example" data-url="/examples/acorn.html">
-      <summary>Acorn + React</summary>
-    </details>
-    <details class="example" data-url="/examples/acorn%20debug.html">
-      <summary>Acorn Dev + React</summary>
-    </details>
-    <details class="example" data-url="/examples/acorn_preact.html">
-      <summary>Acorn + Preact</summary>
-    </details>
-
-    <h2>Meriyah</h2>
-    <p>
-      Meriyah follows the Acorn-style split for pages that prefer its parser.
-      <code>bundless.meriyah.min.js</code> is the default production-mode package/browser build without runtime inline maps.
-      <code>bundless.meriyah.prod.js</code> is the Terser-minified production option for the smallest deployment.
-      <code>bundless.meriyah.dev.js</code> keeps development behavior and runtime inline source maps so browser debugging points back to JSX.
-    </p>
-    <details class="example" data-url="/examples/meriyah.html">
-      <summary>Meriyah + React</summary>
-    </details>
-    <details class="example" data-url="/examples/meriyah%20debug.html">
-      <summary>Meriyah Dev + React</summary>
-    </details>
-    <details class="example" data-url="/examples/meriyah_preact.html">
-      <summary>Meriyah + Preact</summary>
-    </details>
-
-    <h2>Babel</h2>
-    <p>
-      Babel is the broad-syntax choice when you want Babel standalone's transform coverage in the browser.
-      <code>bundless.babel.min.js</code> is a single build with its own source maps.
-    </p>
-    <details class="example" data-url="/examples/babel.html">
-      <summary>Babel + React</summary>
-    </details>
-
-    <h2>Sucrase</h2>
-    <p>
-      Sucrase is the JSX + TypeScript choice.
-      Sucrase 52Kb; <code>bundless.sucrase.min.js</code> is a single build with its own source maps.
-    </p>
-    <details class="example" data-url="/examples/sucrase.html">
-      <summary>Sucrase + React</summary>
-    </details>
-    <details class="example" data-url="/examples/sucrase%20debug.html">
-      <summary>Sucrase Debug Component + React</summary>
-    </details>
-    <details class="example" data-url="/examples/sucrase_preact.html">
-      <summary>Sucrase + Preact</summary>
-    </details>
 
     <script>
       const sourceCache = new Map();

@@ -396,7 +396,7 @@ function toPreact(code) {
     code = code.replace(/React.useMemo/g, "useMemo");
     code = code.replace(/React.Fragment/g, "");
 
-    code = code.replace(/import React.*from ['"].*['"];?\n?/g, "");
+    code = code.replace(/import\s+[\s\S]*?\s+from ['"]react(?:-dom)?(?:\/[^'"]*)?['"];?\n?/g, "");
     code = prefix + code;
   }
   return code;

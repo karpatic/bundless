@@ -12,9 +12,9 @@ Add `to="preact"` to the tag if you want your react code transpiled to preact. M
 - 👉 Preact Uses `inputRef.focus()` instead of `inputRef.current.focus()`
 - 👉 Preact Uses  `e.currentTarget.value` instead of `e.target.value`
 
-### ReactDOM import note
+### Import interop
 
-In Bundless, default imports are currently resolved from `module.default`. Because of that, `import ReactDOM from 'react-dom'` can fail in this tool. Use `import * as ReactDOM from 'react-dom'` or import named APIs (for example `import { createRoot } from 'react-dom/client'`).
+Default imports use the module's own `default` export when it exists. If a module has no default export, Bundless falls back to the module namespace for that default binding. Named imports remain strict, namespace imports stay namespaces, and side-effect imports only load the module.
 
 ## A word from Babel
 
