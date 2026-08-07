@@ -13,6 +13,9 @@
       .example-view { display: grid; gap: 1em; margin: .5em 0 1em; }
       pre { border: 1px solid; margin: 0; max-height: 24em; overflow: auto; padding: .5em; white-space: pre-wrap; }
       iframe { border: 1px solid; box-sizing: border-box; height: 24em; width: 100%; }
+      .table-scroll { margin: .75em 0 1em; overflow-x: auto; }
+      table { border-collapse: collapse; min-width: 720px; width: 100%; }
+      th, td { border: 1px solid; padding: .5em; text-align: left; vertical-align: top; }
       @media (min-width: 760px) {
         .example-view { grid-template-columns: 1fr 1fr; }
       }
@@ -68,24 +71,362 @@
 
     <h2 id="webpack">Move to Webpack</h2>
     <p>
-      <code>bundlessdev/webpack</code> is the seamless path to a full-fledged bundled environment.
-      It rewrites literal <code>window.import()</code> calls to native imports, converts supported <code>window.Bundless.prefetch()</code> calls into Webpack prefetch hints, and can strip Bundless runtime and prefetch tags from HtmlWebpackPlugin output while the app keeps its normal JSX loader.
+      Bundless is an on-ramp to Webpack: normal application modules can keep literal <code>window.import()</code> calls and supported <code>window.Bundless.prefetch()</code> calls while Webpack takes over resolution and chunking.
+      The plugin does not replace the project's Babel, SWC, esbuild, or TypeScript JSX loader; keep that loader in the normal module pipeline.
     </p>
     <pre><code>const BundlessWebpackPlugin = require("bundlessdev/webpack");
 
 module.exports = {
+  entry: "./src/index.jsx",
   module: {
     rules: [
       {
-        test: /\.jsx?$/,
+        test: /\.[jt]sx?$/,
         exclude: /node_modules/,
-        use: "babel-loader",
+        use: {
+          loader: "babel-loader",
+          options: {
+            presets: ["@babel/preset-react"],
+          },
+        },
       },
     ],
   },
   plugins: [new BundlessWebpackPlugin()],
 };
 </code></pre>
+
+    <h3>Plugin Options</h3>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Option</th>
+            <th>Accepted values/default</th>
+            <th>What it does</th>
+            <th>When to use</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>loader</code></td>
+            <td>Enabled by default; set exactly <code>false</code> to disable.</td>
+            <td>Adds the Bundless Webpack loader as an <code>enforce: "pre"</code> rule using the configured <code>test</code>, <code>include</code>, <code>exclude</code>, <code>parserPlugins</code>, and <code>prefetch</code> values.</td>
+            <td>Leave enabled for automatic <code>window.import()</code> and <code>window.Bundless.prefetch()</code> transforms. Disable when manually wiring the loader rule.</td>
+          </tr>
+          <tr>
+            <td><code>test</code></td>
+            <td>Any Webpack rule <code>test</code> value; default <code>/\.[cm]?[jt]sx?$/</code>.</td>
+            <td>Selects the files that receive the pre-loader when <code>loader !== false</code>.</td>
+            <td>Change only when your application stores Bundless calls in a narrower or wider module set.</td>
+          </tr>
+          <tr>
+            <td><code>include</code></td>
+            <td>Unset by default; any truthy Webpack rule <code>include</code> value.</td>
+            <td>Adds <code>rule.include</code> to the generated pre-loader rule.</td>
+            <td>Use to limit transforms to application source folders.</td>
+          </tr>
+          <tr>
+            <td><code>exclude</code></td>
+            <td>Default <code>/node_modules/</code>; any truthy Webpack rule <code>exclude</code> value. A falsey override omits <code>rule.exclude</code>.</td>
+            <td>Adds <code>rule.exclude</code> to the generated pre-loader rule.</td>
+            <td>Keep the default for normal apps. Override only when Bundless calls live in code the default excludes.</td>
+          </tr>
+          <tr>
+            <td><code>parserPlugins</code></td>
+            <td>Unset by default; extra Babel parser plugin entries.</td>
+            <td>Appends parser plugins to the loader's built-in parser set. Resource paths matching <code>/\.[cm]?tsx?$/</code> also receive the Babel <code>typescript</code> parser plugin.</td>
+            <td>Add when your syntax is not covered by the built-in parser plugins.</td>
+          </tr>
+          <tr>
+            <td><code>prefetch</code></td>
+            <td><code>"webpack"</code> by default; <code>"noop"</code>.</td>
+            <td><code>"webpack"</code> turns supported source-level <code>window.Bundless.prefetch()</code> calls into Webpack prefetch hints and a resolved promise. <code>"noop"</code> returns a resolved promise without hints.</td>
+            <td>Use <code>"webpack"</code> for Webpack-managed prefetching. Use <code>"noop"</code> to keep the async call shape without generating hints.</td>
+          </tr>
+          <tr>
+            <td><code>runtime</code></td>
+            <td><code>false</code> by default; exact <code>false</code> installs false aliases. Any other value skips alias installation.</td>
+            <td>When exactly <code>false</code>, calls the runtime-alias step so Webpack resolves configured Bundless runtime imports to <code>false</code>.</td>
+            <td>Keep the default after moving runtime work into Webpack. Use a non-false value only if the bundle still needs Bundless runtime imports.</td>
+          </tr>
+          <tr>
+            <td><code>runtimeAliases</code></td>
+            <td>Unset uses the built-in alias map when <code>runtime === false</code>; a custom object replaces the built-ins.</td>
+            <td>Merges aliases before existing <code>resolve.alias</code> entries, so aliases already present in the Webpack config win.</td>
+            <td>Use only when the default runtime exclusions are too broad or too narrow.</td>
+          </tr>
+          <tr>
+            <td><code>stripHtmlRuntime</code></td>
+            <td><code>true</code> by default; set exactly <code>false</code> to disable.</td>
+            <td>Hooks HtmlWebpackPlugin when present. It filters Bundless runtime script tags, Bundless source script tags, and unignored Bundless prefetch tags from HtmlWebpackPlugin tag groups, and removes unignored declarative prefetch script blocks before emit.</td>
+            <td>Leave enabled when HtmlWebpackPlugin is producing HTML that still contains Bundless bootstrap tags. Disable if you intentionally keep those tags.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      Default runtime aliases when <code>runtime === false</code>: <code>bundlessdev</code>, <code>bundlessdev/acorn</code>, <code>bundlessdev/acorn/dev</code>, <code>bundlessdev/babel</code>, <code>bundlessdev/meriyah</code>, and <code>bundlessdev/sucrase</code> are aliased to <code>false</code>.
+      Existing Webpack <code>resolve.alias</code> entries win because the plugin aliases are merged first.
+    </p>
+
+    <h3>HTML Behavior</h3>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>HTML input</th>
+            <th>Default behavior</th>
+            <th>Important limit</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Bundless runtime <code>&lt;script src="...bundless.acorn...js"&gt;</code>, <code>babel</code>, <code>meriyah</code>, or <code>sucrase</code> tags in HtmlWebpackPlugin tag groups</td>
+            <td>Removed when <code>stripHtmlRuntime !== false</code> and HtmlWebpackPlugin is present.</td>
+            <td><code>data-webpack-ignore</code> does not preserve runtime script tags.</td>
+          </tr>
+          <tr>
+            <td>Source tags with <code>type="text/jsx"</code>, <code>type="text/tsx"</code>, <code>type="text/babel"</code>, or the matching <code>application/*</code> forms in HtmlWebpackPlugin tag groups</td>
+            <td>Removed when <code>stripHtmlRuntime !== false</code> and HtmlWebpackPlugin is present.</td>
+            <td>The plugin does not turn source script tags into Webpack modules; use normal Webpack entries and loaders.</td>
+          </tr>
+          <tr>
+            <td><code>&lt;script type="application/json" data-bundless-prefetch&gt;</code> blocks</td>
+            <td>Declarative prefetch contents are stripped by default when <code>stripHtmlRuntime !== false</code>.</td>
+            <td>They are not converted into Webpack hints. Source-level <code>window.Bundless.prefetch()</code> calls are what the loader converts.</td>
+          </tr>
+          <tr>
+            <td><code>data-webpack-ignore</code> on a <code>data-bundless-prefetch</code> script</td>
+            <td>Preserves that prefetch block.</td>
+            <td>This escape hatch only preserves prefetch blocks; it does not preserve runtime or source script tags.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Transformer Limits</h3>
+    <ul>
+      <li>The transformer does not transform calls when <code>window</code> is lexically shadowed.</li>
+      <li><code>window.import()</code> rewrites its callee to native <code>import()</code> and therefore uses Webpack dynamic-import semantics.</li>
+      <li>Prefetch hints are generated only for a string literal or array literal string entries.</li>
+      <li>Unsupported or dynamic prefetch arguments become a resolved <code>Promise</code> with no hint; <code>prefetch: "noop"</code> also returns a resolved <code>Promise</code>.</li>
+      <li>Transformed prefetch calls do not evaluate modules.</li>
+    </ul>
+
+    <h3>Public API</h3>
+    <h4><code>new BundlessWebpackPlugin(options)</code></h4>
+    <div class="table-scroll">
+      <table>
+        <tbody>
+          <tr>
+            <th>What</th>
+            <td>The default export from <code>bundlessdev/webpack</code>, also available as <code>require("bundlessdev/webpack").BundlessWebpackPlugin</code>.</td>
+          </tr>
+          <tr>
+            <th>How</th>
+            <td>Stores options by applying plugin defaults, then overlaying the supplied <code>options</code> object.</td>
+          </tr>
+          <tr>
+            <th>When to use</th>
+            <td>Add to <code>plugins</code> for the standard migration path.</td>
+          </tr>
+          <tr>
+            <th>Result/important limit</th>
+            <td>Installs behavior only when Webpack calls <code>apply()</code>; it does not replace the app's normal JSX, TypeScript, Babel, SWC, or esbuild loader.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4><code>plugin.apply(compiler)</code></h4>
+    <div class="table-scroll">
+      <table>
+        <tbody>
+          <tr>
+            <th>What</th>
+            <td>The Webpack lifecycle method for the plugin. Users do not call it directly.</td>
+          </tr>
+          <tr>
+            <th>How</th>
+            <td>Webpack passes the compiler. The method adds the pre-loader unless <code>loader === false</code>, installs runtime aliases when <code>runtime === false</code>, and hooks HtmlWebpackPlugin unless <code>stripHtmlRuntime === false</code>.</td>
+          </tr>
+          <tr>
+            <th>When to use</th>
+            <td>Use indirectly by putting a plugin instance in <code>plugins</code>.</td>
+          </tr>
+          <tr>
+            <th>Result/important limit</th>
+            <td>Mutates Webpack options and hooks the compilation; it is not an application runtime API.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4><code>bundlessWebpack(config, options)</code></h4>
+    <div class="table-scroll">
+      <table>
+        <tbody>
+          <tr>
+            <th>What</th>
+            <td>A named helper export from <code>bundlessdev/webpack</code>.</td>
+          </tr>
+          <tr>
+            <th>How</th>
+            <td>Returns a shallow copy of <code>config</code> with <code>new BundlessWebpackPlugin(options)</code> appended to <code>plugins</code>.</td>
+          </tr>
+          <tr>
+            <th>When to use</th>
+            <td>Use when a config factory or wrapper style is more convenient than editing the <code>plugins</code> array directly.</td>
+          </tr>
+          <tr>
+            <th>Result/important limit</th>
+            <td>It does not deep-merge config objects; it preserves existing plugins by spreading <code>config.plugins || []</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4><code>bundlessdev/webpack/loader</code> and <code>require("bundlessdev/webpack").loader</code></h4>
+    <div class="table-scroll">
+      <table>
+        <tbody>
+          <tr>
+            <th>What</th>
+            <td>The package loader export and the loader path exported from <code>bundlessdev/webpack</code>.</td>
+          </tr>
+          <tr>
+            <th>How</th>
+            <td>The plugin wires this loader with <code>enforce: "pre"</code>. Manual wiring should also use <code>enforce: "pre"</code> so Bundless calls are rewritten before normal transpilation.</td>
+          </tr>
+          <tr>
+            <th>When to use</th>
+            <td>Use manually when <code>loader: false</code> is set on the plugin or when the transform needs custom Webpack rule placement.</td>
+          </tr>
+          <tr>
+            <th>Result/important limit</th>
+            <td>The loader marks itself cacheable, skips files that do not include the sentinel strings it needs, and returns transformed code only for supported Bundless calls.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <pre><code>{
+  enforce: "pre",
+  test: /\.[cm]?[jt]sx?$/,
+  exclude: /node_modules/,
+  use: {
+    loader: require("bundlessdev/webpack").loader,
+    options: {
+      prefetch: "webpack",
+    },
+  },
+}
+</code></pre>
+
+    <h4><code>window.import(specifier)</code> under the plugin</h4>
+    <div class="table-scroll">
+      <table>
+        <tbody>
+          <tr>
+            <th>What</th>
+            <td>A Bundless runtime import call that the loader recognizes in source modules.</td>
+          </tr>
+          <tr>
+            <th>How</th>
+            <td>When <code>window</code> is not lexically shadowed, the transformer rewrites the callee from <code>window.import</code> to native <code>import</code>.</td>
+          </tr>
+          <tr>
+            <th>When to use</th>
+            <td>Keep existing application calls during migration so Webpack can own the dynamic import.</td>
+          </tr>
+          <tr>
+            <th>Result/important limit</th>
+            <td>The resulting call follows Webpack dynamic-import semantics, including Webpack's own handling of specifiers and chunks.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4><code>window.Bundless.prefetch(urlOrUrls)</code> under the plugin</h4>
+    <div class="table-scroll">
+      <table>
+        <tbody>
+          <tr>
+            <th>What</th>
+            <td>A Bundless source-level prefetch call that the loader can turn into Webpack prefetch hints.</td>
+          </tr>
+          <tr>
+            <th>How</th>
+            <td>With <code>prefetch: "webpack"</code>, a string literal or array literal string entries become Webpack dynamic imports marked with <code>webpackPrefetch: true</code>, followed by a resolved <code>Promise</code>.</td>
+          </tr>
+          <tr>
+            <th>When to use</th>
+            <td>Use for prefetch lists that should become Webpack-managed hints.</td>
+          </tr>
+          <tr>
+            <th>Result/important limit</th>
+            <td>Unsupported or dynamic arguments produce a resolved <code>Promise</code> with no hint; <code>prefetch: "noop"</code> does the same. Transformed prefetch calls do not evaluate modules.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>Declarative <code>data-bundless-prefetch</code></h4>
+    <div class="table-scroll">
+      <table>
+        <tbody>
+          <tr>
+            <th>What</th>
+            <td>The HTML API used by the browser runtime for declarative prefetch lists.</td>
+          </tr>
+          <tr>
+            <th>How</th>
+            <td>The plugin treats matching script tags as Bundless HTML bootstrap content and strips unignored blocks by default.</td>
+          </tr>
+          <tr>
+            <th>When to use</th>
+            <td>Keep only when that HTML block is intentionally still needed outside the Webpack hint path.</td>
+          </tr>
+          <tr>
+            <th>Result/important limit</th>
+            <td>Declarative prefetch blocks are not converted into Webpack hints. Move wanted hints to source-level <code>window.Bundless.prefetch()</code> calls.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4><code>data-webpack-ignore</code></h4>
+    <div class="table-scroll">
+      <table>
+        <tbody>
+          <tr>
+            <th>What</th>
+            <td>An HTML escape hatch for a <code>data-bundless-prefetch</code> script block.</td>
+          </tr>
+          <tr>
+            <th>How</th>
+            <td>When the attribute is present on a Bundless prefetch script, the plugin's tag and HTML stripping checks leave that prefetch block in place.</td>
+          </tr>
+          <tr>
+            <th>When to use</th>
+            <td>Use for a declarative prefetch block that must survive HtmlWebpackPlugin output.</td>
+          </tr>
+          <tr>
+            <th>Result/important limit</th>
+            <td>It only preserves prefetch blocks. It does not preserve Bundless runtime tags, source script tags, or create Webpack prefetch hints.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Migration Checklist</h3>
+    <ul>
+      <li>Retain normal application imports, literal <code>window.import()</code> calls, and supported source-level <code>window.Bundless.prefetch()</code> calls.</li>
+      <li>Configure a normal Webpack entry and the project's JSX or TypeScript loader.</li>
+      <li>Add <code>new BundlessWebpackPlugin()</code> to <code>plugins</code>.</li>
+      <li>Remove browser bootstrap and source script tags, or let HtmlWebpackPlugin stripping handle generated tags.</li>
+      <li>Migrate declarative prefetch lists to source-level <code>window.Bundless.prefetch()</code> calls when Webpack hints are wanted.</li>
+    </ul>
 
     <h2>Runtime Transpilation</h2>
     <p>
