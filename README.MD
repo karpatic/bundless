@@ -10,21 +10,29 @@ Create React apps without bundling.
 
 Add Bundless to your page, then mark JSX with `type="text/jsx"` or `type="text/babel"`. Bundless transpiles it in the browser when the page loads.
 
-### JSX and TypeScript
+### Runtime choices
 
-<strong><a href="/dist/bundless.sucrase.min.js" target="_blank">Sucrase</a>: 52Kb | source-maps</strong>
-
-```html
-<script src="./dist/bundless.sucrase.min.js"></script>
-```
-
-### JSX only
-
-<strong><a href="/dist/bundless.acorn.min.js" target="_blank">Acorn</a>: 36Kb | no source-maps</strong>
+<strong><a href="/dist/bundless.acorn.min.js" target="_blank">Acorn</a>: 36Kb | default runtime | no runtime inline source maps</strong>
 
 ```html
-<script src="./dist/bundless.acorn.min.js"></script>
+<script src="./dist/bundless.acorn.min.js" type="module"></script>
 ```
+
+<strong><a href="/dist/bundless.acorn.dev.js" target="_blank">Acorn dev</a>: browser debugging source maps</strong>
+
+```html
+<script src="./dist/bundless.acorn.dev.js" type="module"></script>
+```
+
+Use Acorn for normal JSX pages. Use Acorn dev when you want runtime inline source maps so browser debugging points back to the JSX source; Acorn default/min and explicit `.prod.js` builds omit those runtime maps.
+
+<strong><a href="/dist/bundless.sucrase.min.js" target="_blank">Sucrase</a>: 52Kb | JSX + TypeScript | source-maps</strong>
+
+```html
+<script src="./dist/bundless.sucrase.min.js" type="module"></script>
+```
+
+Use Sucrase when you need JSX and TypeScript syntax. Babel and Meriyah are also available; see the [examples grid](https://bundless.dev/examples/index.html) for working pages and the full build matrix.
 
 ## Example page
 
@@ -67,7 +75,6 @@ See more complete, working pages in [Examples](https://bundless.dev/examples/ind
 ## Options
 
 - Add `to="preact"` to transpile React code to Preact.
-- Add `cache="false"` to add a cache-busting query string to transformed imports.
 - Use an import map when your JSX imports packages such as React.
 
 That's it!

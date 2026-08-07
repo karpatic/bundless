@@ -5,22 +5,23 @@
     <title>Bundless.Dev</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="Acorn Parser Demo" />
-    <script type="importmap">
-      {
-        "imports": {
-          "react": "https://esm.sh/react@17.0.2/es2022/react.mjs",
-          "react-dom": "https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs",
-          "marked": "https://esm.sh/marked@2.0.1"
-        }
-      }
-    </script>
-    <script src="https://esm.sh/react@17.0.2/es2022/react.mjs" type="module"></script>
-    <script src="https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs" type="module"></script>
-    <script src="/dist/bundless.sucrase.min.js"></script>
+    <style>
+      body { max-width: 960px; margin: 1em auto; padding: 0 1em; }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { padding: .35em .5em; text-align: left; vertical-align: top; }
+      button { font: inherit; }
+      .example-choice { width: 100%; text-align: left; }
+      [aria-pressed="true"] { font-weight: bold; }
+      #viewer { margin-top: 1em; }
+      #viewer[hidden], [hidden] { display: none; }
+      #viewer-controls { margin: .5em 0; }
+      #example-code { border: 1px solid; max-height: 18em; overflow: auto; padding: .5em; white-space: pre-wrap; }
+      #example-output { border: 1px solid; height: 22em; width: 100%; }
+    </style>
   </head>
   <body>
     <h1>Bundless Examples</h1>
-    Examples listed here are used in the benchmarks.  
+    Many examples listed here are used in the benchmarks.
     <h2>Site links:</h2>
     <ul>
       <li><a href="/index.html">Home</a></li>
@@ -30,60 +31,255 @@
 
     <h2>React and Preact Transpilation</h2>
     <p>
-      The examples on this site demonstrate React code that gets transpiled at runtime to either ES6-compatible React or Preact code using different versions of the Bundless "<code>src=bundless.PARSERNAME.[min||dev].js</script></code>". 
+      The examples on this site demonstrate React code that gets transpiled at runtime to either ES6-compatible React or Preact code using Bundless runtime builds.
       To use Preact instead of React, include the attribute <code>to="preact"</code> in the script tag. This allows you to switch between 
       React and Preact seamlessly, depending on your requirements. No changes to your codebase are required to transition to a bundler.
     </p>
 
-    <h2>Available Parsers</h2>
+    <h2>Build Variants</h2>
     <p>
-      There are four different parsers available in these examples. Each parser has its own strengths and weaknesses, as outlined in the table below:
+      Acorn and Meriyah have default/min and explicit prod builds without runtime inline source maps. Their <code>.dev.js</code> builds add runtime inline source maps so browser debugging can point back to the JSX source. Babel and Sucrase have single builds; they are not split into the same dev/prod matrix.
     </p>
 
     <table border="1">
       <thead>
         <tr>
-          <th>Parser</th>
-          <th>Pros</th>
-          <th>Cons</th>
+          <th>Runtime</th>
+          <th>Builds</th>
+          <th>Runtime inline source maps</th>
+          <th>Notes</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td>Acorn</td>
-          <td>Lightweight, fast, and highly modular.</td>
-          <td>Limited support for advanced syntax features.</td>
-        </tr>
-        <tr>
-          <td>Babel</td>
-          <td>Comprehensive syntax support and ecosystem integration.</td>
-          <td>Slower performance compared to other parsers.</td>
+          <td><code>bundless.acorn.min.js</code>, <code>bundless.acorn.prod.js</code>, <code>bundless.acorn.dev.js</code></td>
+          <td>Only <code>.dev.js</code></td>
+          <td>Acorn 36Kb. Lightweight JSX runtime.</td>
         </tr>
         <tr>
           <td>Meriyah</td>
-          <td>Fast and ES2020-compliant.</td>
-          <td>Smaller community and fewer plugins.</td>
+          <td><code>bundless.meriyah.min.js</code>, <code>bundless.meriyah.prod.js</code>, <code>bundless.meriyah.dev.js</code></td>
+          <td>Only <code>.dev.js</code></td>
+          <td>Fast JSX parser alternative.</td>
+        </tr>
+        <tr>
+          <td>Babel</td>
+          <td><code>bundless.babel.min.js</code></td>
+          <td>Single build with Babel source maps</td>
+          <td>Broad syntax support.</td>
         </tr>
         <tr>
           <td>Sucrase</td>
-          <td>Optimized for development with fast transpilation.</td>
-          <td>Not a full parser; limited to specific transformations.</td>
+          <td><code>bundless.sucrase.min.js</code></td>
+          <td>Single build with Sucrase source maps</td>
+          <td>Sucrase 52Kb. JSX and TypeScript transform support.</td>
         </tr>
       </tbody>
     </table>
 
     <h2>Examples:</h2>
-    <ul> 
-      <li><a href="/examples/acorn_speed_test.html">Acorn Speed Test</a></li>
-      <li><a href="/examples/acorn.html">Acorn + React</a></li>
-      <li><a href="/examples/babel.html">Babel  React</a></li>
-      <li><a href="/examples/acorn debug.html">Acorn Debug + React</a></li>
-      <li><a href="/examples/acorn_preact.html">Acorn Preact</a></li>
-      <li><a href="/examples/meriyah.html">Meriyah + React</a></li>
-      <li><a href="/examples/meriyah_preact.html">Meriyah + Preact</a></li>
-      <li><a href="/examples/sucrase.html">Sucrase + React</a></li>
-      <li><a href="/examples/sucrase debug.html">Sucrase Debug + React</a></li>
-      <li><a href="/examples/sucrase_preact.html">Sucrase + Preact</a></li>
-    </ul>
+    <p>Choose an example to view its source or run it without leaving this page.</p>
+
+    <table border="1" aria-label="Bundless example choices">
+      <thead>
+        <tr>
+          <th>Example</th>
+          <th>Runtime</th>
+          <th>Target</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><button class="example-choice" type="button" data-url="/examples/acorn_speed_test.html" aria-controls="viewer" aria-expanded="false">Acorn Speed Test</button></td>
+          <td><code>bundless.acorn.min.js</code></td>
+          <td>Preact</td>
+          <td>Inline <code>type="text/babel"</code> example.</td>
+        </tr>
+        <tr>
+          <td><button class="example-choice" type="button" data-url="/examples/acorn.html" aria-controls="viewer" aria-expanded="false">Acorn + React</button></td>
+          <td><code>bundless.acorn.min.js</code></td>
+          <td>React</td>
+          <td>Default/min build, no runtime inline source maps.</td>
+        </tr>
+        <tr>
+          <td><button class="example-choice" type="button" data-url="/examples/acorn%20debug.html" aria-controls="viewer" aria-expanded="false">Acorn Dev + React</button></td>
+          <td><code>bundless.acorn.dev.js</code></td>
+          <td>React</td>
+          <td>Dev build with runtime inline source maps for browser debugging.</td>
+        </tr>
+        <tr>
+          <td><button class="example-choice" type="button" data-url="/examples/acorn_preact.html" aria-controls="viewer" aria-expanded="false">Acorn + Preact</button></td>
+          <td><code>bundless.acorn.min.js</code></td>
+          <td>Preact</td>
+          <td>Uses <code>to="preact"</code>.</td>
+        </tr>
+        <tr>
+          <td><button class="example-choice" type="button" data-url="/examples/babel.html" aria-controls="viewer" aria-expanded="false">Babel + React</button></td>
+          <td><code>bundless.babel.min.js</code></td>
+          <td>React</td>
+          <td>Single Babel build.</td>
+        </tr>
+        <tr>
+          <td><button class="example-choice" type="button" data-url="/examples/meriyah.html" aria-controls="viewer" aria-expanded="false">Meriyah + React</button></td>
+          <td><code>bundless.meriyah.min.js</code></td>
+          <td>React</td>
+          <td>Default/min build, no runtime inline source maps.</td>
+        </tr>
+        <tr>
+          <td><button class="example-choice" type="button" data-url="/examples/meriyah%20debug.html" aria-controls="viewer" aria-expanded="false">Meriyah Dev + React</button></td>
+          <td><code>bundless.meriyah.dev.js</code></td>
+          <td>React</td>
+          <td>Dev build with runtime inline source maps for browser debugging.</td>
+        </tr>
+        <tr>
+          <td><button class="example-choice" type="button" data-url="/examples/meriyah_preact.html" aria-controls="viewer" aria-expanded="false">Meriyah + Preact</button></td>
+          <td><code>bundless.meriyah.min.js</code></td>
+          <td>Preact</td>
+          <td>Uses <code>to="preact"</code>.</td>
+        </tr>
+        <tr>
+          <td><button class="example-choice" type="button" data-url="/examples/sucrase.html" aria-controls="viewer" aria-expanded="false">Sucrase + React</button></td>
+          <td><code>bundless.sucrase.min.js</code></td>
+          <td>React</td>
+          <td>Single Sucrase build.</td>
+        </tr>
+        <tr>
+          <td><button class="example-choice" type="button" data-url="/examples/sucrase%20debug.html" aria-controls="viewer" aria-expanded="false">Sucrase Debug Component + React</button></td>
+          <td><code>bundless.sucrase.min.js</code></td>
+          <td>React</td>
+          <td>Uses a debug component, not a Sucrase dev build.</td>
+        </tr>
+        <tr>
+          <td><button class="example-choice" type="button" data-url="/examples/sucrase_preact.html" aria-controls="viewer" aria-expanded="false">Sucrase + Preact</button></td>
+          <td><code>bundless.sucrase.min.js</code></td>
+          <td>Preact</td>
+          <td>Uses <code>to="preact"</code>.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <section id="viewer" hidden aria-live="polite">
+      <h2 id="viewer-title">Example Viewer</h2>
+      <div id="viewer-controls" role="tablist" aria-label="Example viewer controls">
+        <button id="show-code" type="button" role="tab" aria-selected="true" aria-controls="code-panel">Code</button>
+        <button id="show-output" type="button" role="tab" aria-selected="false" aria-controls="output-panel">Output</button>
+        <button id="close-viewer" type="button">Close</button>
+      </div>
+      <p id="viewer-status" aria-live="polite"></p>
+      <div id="code-panel" role="tabpanel" aria-labelledby="show-code">
+        <pre id="example-code"></pre>
+      </div>
+      <div id="output-panel" role="tabpanel" aria-labelledby="show-output" hidden>
+        <iframe id="example-output" title="Selected example output"></iframe>
+      </div>
+    </section>
+
+    <script>
+      const viewer = document.getElementById("viewer");
+      const viewerTitle = document.getElementById("viewer-title");
+      const viewerStatus = document.getElementById("viewer-status");
+      const codePanel = document.getElementById("code-panel");
+      const outputPanel = document.getElementById("output-panel");
+      const codeButton = document.getElementById("show-code");
+      const outputButton = document.getElementById("show-output");
+      const closeButton = document.getElementById("close-viewer");
+      const codeBlock = document.getElementById("example-code");
+      const outputFrame = document.getElementById("example-output");
+      const choices = Array.from(document.querySelectorAll(".example-choice"));
+      const fetchedCode = new Map();
+      let activeChoice = null;
+
+      function setSelectedChoice(choice) {
+        choices.forEach((button) => {
+          const isActive = button === choice;
+          button.setAttribute("aria-expanded", String(isActive));
+          button.setAttribute("aria-pressed", String(isActive));
+        });
+        activeChoice = choice;
+      }
+
+      function closeViewer() {
+        viewer.hidden = true;
+        viewerStatus.textContent = "";
+        outputFrame.removeAttribute("src");
+        setSelectedChoice(null);
+      }
+
+      function showPanel(panel) {
+        const isCode = panel === "code";
+        codePanel.hidden = !isCode;
+        outputPanel.hidden = isCode;
+        codeButton.setAttribute("aria-selected", String(isCode));
+        outputButton.setAttribute("aria-selected", String(!isCode));
+      }
+
+      async function showCode(choice) {
+        const url = choice.dataset.url;
+        showPanel("code");
+        viewerStatus.textContent = "Loading source...";
+        codeBlock.textContent = "";
+
+        try {
+          if (!fetchedCode.has(url)) {
+            const response = await fetch(url);
+            if (!response.ok) {
+              throw new Error(`${response.status} ${response.statusText}`);
+            }
+            fetchedCode.set(url, await response.text());
+          }
+          if (activeChoice !== choice) {
+            return;
+          }
+          codeBlock.textContent = fetchedCode.get(url);
+          viewerStatus.textContent = `Showing source for ${choice.textContent}.`;
+        } catch (error) {
+          if (activeChoice !== choice) {
+            return;
+          }
+          codeBlock.textContent = "";
+          viewerStatus.textContent = `Could not load ${url}: ${error.message}. This viewer needs the examples to be served over HTTP.`;
+        }
+      }
+
+      function showOutput(choice) {
+        showPanel("output");
+        outputFrame.title = `${choice.textContent} output`;
+        outputFrame.src = choice.dataset.url;
+        viewerStatus.textContent = `Running ${choice.textContent}.`;
+      }
+
+      function openExample(choice) {
+        if (activeChoice === choice && !viewer.hidden) {
+          closeViewer();
+          return;
+        }
+
+        setSelectedChoice(choice);
+        viewer.hidden = false;
+        viewerTitle.textContent = choice.textContent;
+        showCode(choice);
+      }
+
+      choices.forEach((choice) => {
+        choice.addEventListener("click", () => openExample(choice));
+      });
+      setSelectedChoice(null);
+
+      codeButton.addEventListener("click", () => {
+        if (activeChoice) {
+          showCode(activeChoice);
+        }
+      });
+
+      outputButton.addEventListener("click", () => {
+        if (activeChoice) {
+          showOutput(activeChoice);
+        }
+      });
+
+      closeButton.addEventListener("click", closeViewer);
+    </script>
   </body>
 </html>
