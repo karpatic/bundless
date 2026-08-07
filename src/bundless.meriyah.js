@@ -1,5 +1,5 @@
-import * as meriyah from "./../rsc/meriyah/meriyah.esm.js"; 
-import { handleImports, handleScriptTag, toPreact } from './bundless.utils.js'
+import * as meriyah from "./../rsc/meriyah/meriyah.esm.js";
+import { handleImports, handleScriptTag, hasBundlessPrefetchScriptTags, startBundlessPrefetches, toPreact } from './bundless.utils.js'
 import { transformAST } from './bundless.utils.ast.transpiler.js';
 
 
@@ -10,11 +10,11 @@ window.Bundless = {
   transpileCode,
   cache: true,
   to: 'react',
-  prod: false, 
-}; 
+  prod: false,
+};
 
 let SMTools = {};
-async function transformJSX(code, filePath) { 
+async function transformJSX(code, filePath) {
   const ast = meriyah.parse(code, {
     module: true,
     jsx: true,
@@ -31,8 +31,8 @@ async function transformJSX(code, filePath) {
     }
   });
 
-  // Update source mapper settings for this specific file 
-  if (!window.Bundless.prod) { 
+  // Update source mapper settings for this specific file
+  if (!window.Bundless.prod) {
 
     const loadSourceMapTools = async () => {
       console.log('Loading Sucrase');
@@ -40,7 +40,7 @@ async function transformJSX(code, filePath) {
       const { initSourceMapper, setActiveMapper } = await import('./bundless.utils.ast.sourecmapper.js');
       SMTools = { GenMapping, maybeAddSegment, toEncodedMap, initSourceMapper, setActiveMapper };
       return SMTools
-    }; 
+    };
     SMTools = await loadSourceMapTools();
 
     console.log('~~~~ transformJSX:', 'filePath', filePath);
@@ -50,35 +50,35 @@ async function transformJSX(code, filePath) {
       sourceFilename: filePath,
       sourceCode: code
     });
-    
+
     SMTools.setActiveMapper(sourceMapper);
     SMTools.map = sourceMapper.map;
     SMTools.updatePosition = sourceMapper.updatePosition;
   }
 
   // return JSON.stringify(ast, null, 2);
-    const result = transformAST(ast, { 
-      code, filePath, ...SMTools 
+    const result = transformAST(ast, {
+      code, filePath, ...SMTools
     });
-  let { code: transpiledCode, map } = result;   
-  if(window.Bundless.to === 'preact'){  
+  let { code: transpiledCode, map } = result;
+  if(window.Bundless.to === 'preact'){
     transpiledCode = toPreact(transpiledCode);
   }
   if(window.Bundless.prod){
-    return transpiledCode 
+    return transpiledCode
   }
   else{
-    console.log('transformJSX:',  'map', result.map); 
-    const sourceMapComment = `//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(map))}`; 
-    return `${transpiledCode}\n${sourceMapComment}`; 
-  } 
-} 
- 
-async function transpileCode(code, basePath, filename) { 
+    console.log('transformJSX:',  'map', result.map);
+    const sourceMapComment = `//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(map))}`;
+    return `${transpiledCode}\n${sourceMapComment}`;
+  }
+}
+
+async function transpileCode(code, basePath, filename) {
   // console.log('Transpiler: Transpiling:', filename);
-  const processedCode = await handleImports(code, basePath, filename);  
+  const processedCode = await handleImports(code, basePath, filename);
   // console.log('Processed code: ', processedCode);
-  const transpiledCode = transformJSX(processedCode, basePath + filename);    
+  const transpiledCode = transformJSX(processedCode, basePath + filename);
   return transpiledCode;
 }
 
@@ -88,15 +88,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!scriptTag) {
     console.warn('bundless not found.');
     return;
-  } 
-  const attrs = scriptTag.attributes; 
+  }
+  const attrs = scriptTag.attributes;
   if (attrs.to) {
     window.Bundless.to = attrs.to.value
   }
-  
-  const scriptTags = document.querySelectorAll("script[type='text/jsx'], script[type='text/babel']"); 
+
+  const hasPrefetchTags = hasBundlessPrefetchScriptTags();
+  if (hasPrefetchTags) {
+    startBundlessPrefetches();
+  }
+
+  const scriptTags = document.querySelectorAll("script[type='text/jsx'], script[type='text/babel']");
   if (scriptTags.length === 0) {
-    console.warn("No JSX scripts found.");
+    if (!hasPrefetchTags) {
+      console.warn("No JSX scripts found.");
+    }
     return;
   }
   for (let scriptTag of scriptTags) {

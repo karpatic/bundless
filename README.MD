@@ -1,4 +1,4 @@
-# Build more, bundle less. 
+# Build more, bundle less.
 
 Create react apps without bundling.
 
@@ -6,43 +6,42 @@ Create react apps without bundling.
 
 [Try it out](https://bundless.dev/examples/playground.html) - [Examples](https://bundless.dev/examples/index.html) - [Benchmarks](https://bundless.dev/benchmarks/index.html)
 
-## Usage  
+## Usage
 
 All `type='text/jsx'`, `/tsx`, and `/babel` scripts will be transpiled onDomLoad when you place the following tag in your html page:
 
-<strong>JSX & Typescript</strong> <a href="/dist/bundless.sucrase.min.js" target="_blank">link</a>: 52Kb | source-maps 
+<strong>JSX & Typescript</strong> <a href="/dist/bundless.sucrase.min.js" target="_blank">link</a>: 52Kb | source-maps
 
 
 
 ```
 <script src="./bundless.sucrase.min.js"></script>
-``` 
+```
 
 <strong>JSX Only</strong> <a href="/dist/bundless.acorn.min.js" target="_blank">link</a>: 36Kb | no source-maps
 ```
 <script src="./bundless.acorn.min.js"></script>
-``` 
+```
 
 - Add `to="preact"` if you want your react code transpiled to preact.
 - Add `cache="false"` if you want transformed import URLs to receive a cache-busting query string.
 - Tips on [Toubleshooting](http://localhost:3000/troubleshooting.html)
 
-That's it! 
+That's it!
 
 ## Module prefetching
 
-Use `window.Bundless.prefetch()` when an app already knows which JS, JSX, or TS module URLs it will import soon:
+Use an inert JSON script when an app already knows which JS, JSX, or TS module URLs it will import soon:
 
 ```html
-<script>
-  window.Bundless.prefetch([
-    "./components/App.jsx",
-    "./routes/Dashboard.jsx?startup=1"
-  ]);
+<script type="application/json" data-bundless-prefetch>
+["./components/App.jsx", "./routes/Dashboard.jsx?startup=1"]
 </script>
 ```
 
-Prefetch accepts one URL or an iterable of URLs. It fetches module source only and does not transpile, import, or evaluate the module. Later `window.import()` calls reuse the same pending or resolved source fetch by normalized original URL, so equivalent URLs deduplicate while query strings and cache busters remain distinct. Failed prefetches and failed imports are evicted so retrying fetches again.
+On `DOMContentLoaded`, Bundless parses all `data-bundless-prefetch` JSON lists, warns and skips malformed blocks or non-string entries, then concurrently fetches and transpiles each listed module without evaluating it. Later `window.import()` calls reuse the prepared code by normalized original URL, so equivalent URLs deduplicate while query strings and cache busters remain distinct. Failed preparations are evicted so retrying can prepare again.
+
+`window.Bundless.prefetch()` remains available for script-driven prefetching. It accepts one URL or an iterable of URLs, fetches module source only, and shares the same source-fetch cache that `window.import()` uses when no prepared code is available. Failed prefetches and failed imports are evicted so retries fetch again.
 
 ## Webpack migration
 
@@ -70,9 +69,9 @@ The plugin injects a small pre-loader for JavaScript, JSX, TypeScript, and TSX f
 
 Bundless does not transform JSX in Webpack. Keep React imports in your source and configure Babel, SWC, esbuild, or another JSX loader exactly as you normally would.
 
-Use a normal Webpack entry and avoid the browser runtime bootstrap in the built app. Remove the Bundless `<script src="...bundless.*.js">` tag and `type="text/jsx"`/`type="text/babel"` script tags from your production HTML template, or keep using HtmlWebpackPlugin and let `new BundlessWebpackPlugin()` strip those tags from emitted HTML. The plugin also aliases Bundless runtime package entry points to `false` by default so accidental runtime imports are not bundled. For manual rule wiring, the loader is exported as `bundlessdev/webpack/loader`.
- 
- 
+Use a normal Webpack entry and avoid the browser runtime bootstrap in the built app. Remove the Bundless `<script src="...bundless.*.js">` tag, `type="text/jsx"`/`type="text/babel"` script tags, and `data-bundless-prefetch` JSON tags from your production HTML template, or keep using HtmlWebpackPlugin and let `new BundlessWebpackPlugin()` strip those tags from emitted HTML. Add `data-webpack-ignore` to a `data-bundless-prefetch` block if you need HtmlWebpackPlugin output to preserve it; Webpack does not inspect the list contents. The plugin also aliases Bundless runtime package entry points to `false` by default so accidental runtime imports are not bundled. For manual rule wiring, the loader is exported as `bundlessdev/webpack/loader`.
+
+
 ## Source maps
 
 Acorn and Meriyah intentionally split their runtime source-map behavior by build variant. The `.dev.js` variants include runtime inline source maps for debugging. The default/minified variants, such as `bundless.acorn.min.js` and `bundless.meriyah.min.js`, and the explicit `.prod.js` variants omit runtime source maps to avoid production size and runtime overhead.
@@ -84,10 +83,10 @@ This policy is specific to the Acorn and Meriyah runtime transpiler paths. Babel
 
 1. Modules resolve using `<script type="importmap">`.
 2. Static imports are rewritten to the custom `window.import()` loader.
-3. `window.Bundless.prefetch()` can warm the shared source-fetch cache without evaluating modules.
-4. `window.import()` reuses any prefetched source, transpiles it, then imports the transpiled blob.
+3. `data-bundless-prefetch` JSON tags can prepare modules without evaluating them, while `window.Bundless.prefetch()` warms the source-fetch cache only.
+4. `window.import()` reuses any prepared code when present, otherwise reuses fetched source, transpiles it, then imports the transpiled blob.
 5. Repeated or concurrent imports of the same normalized original module URL share the same pending promise and resolved module.
-6. Failed prefetches and imports are removed from their caches so the next call can retry, and cache-busting query strings remain part of the cache key.
+6. Failed preparations and imports are removed from their caches so the next call can retry, and cache-busting query strings remain part of the cache key.
 
 ## Publication
 
@@ -102,7 +101,7 @@ This policy is specific to the Acorn and Meriyah runtime transpiler paths. Babel
 ## Memes
 
 <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
-    <img src="/memes/meme_what_gives_peope_feelings_of_power.jpg" style="width:300px;" /> 
+    <img src="/memes/meme_what_gives_peope_feelings_of_power.jpg" style="width:300px;" />
     <img src="/memes/meme_did_you_just_take_both_pills.jpeg" style="width:300px;" />
-    <img src="/memes/meme_left_exit_12_off_ramp.jpg" style="width:300px;" />  
+    <img src="/memes/meme_left_exit_12_off_ramp.jpg" style="width:300px;" />
 </div>

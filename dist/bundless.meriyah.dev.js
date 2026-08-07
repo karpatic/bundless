@@ -10,13 +10,13 @@ const e$3={0:"Unexpected token",30:"Unexpected token: '%0'",1:"Octal escape sequ
 
 // This transforms static import statements into dynamic import expressions
 function transformStaticImportsToDynamic(importPath, importFileName, namedExports, defaultExport) {
-  let dynamicImportCode = ''; 
-  
+  let dynamicImportCode = '';
+
   // Handle default export
   if (defaultExport) {
     dynamicImportCode += `const ${defaultExport} = await window.import('${importPath}${importFileName}').then(m => m.default); `;
   }
-  
+
   // Handle named exports - FIXED to use window.import with full path including filename
   if (namedExports.length > 0) {
     dynamicImportCode += `const {${namedExports.join(", ")}} = await window.import('${importPath}${importFileName}'); `;
@@ -26,7 +26,7 @@ function transformStaticImportsToDynamic(importPath, importFileName, namedExport
   if (namedExports.length == 0 && !defaultExport) {
     dynamicImportCode += `await window.import('${importPath}${importFileName}'); `;
   }
-  
+
   return dynamicImportCode;
 }
 
@@ -41,23 +41,23 @@ async function handleScriptTag(scriptTag) {
   } else {
     jsxCode = scriptTag.textContent;
   }
-  const filename = scriptTag.src ? scriptTag.src.split("/").slice(-1)[0] : 'inline script'; 
+  const filename = scriptTag.src ? scriptTag.src.split("/").slice(-1)[0] : 'inline script';
   let pathTo = scriptTag.src
     ? scriptTag.src.split("/").slice(0, -1).join("/")
     : location.href.split("/").slice(0, -1).join("/");
-  // add 
+  // add
   if (pathTo && !filename.match(/^(http|\.|\/)/)) {
     pathTo += "/";
-  } 
+  }
 
-  const transpiledCode = await window.Bundless.transpileCode(jsxCode, pathTo, filename); 
-  
+  const transpiledCode = await window.Bundless.transpileCode(jsxCode, pathTo, filename);
+
   // Insert the transpiled code into a new script tag
   const script = document.createElement("script");
   script.type = "module";
-  script.textContent = transpiledCode; 
-  document.body.appendChild(script); 
-} 
+  script.textContent = transpiledCode;
+  document.body.appendChild(script);
+}
 
 function isInImportMap(moduleName) {
   const scriptTag = document.querySelector('script[type="importmap"]');
@@ -72,9 +72,9 @@ function isInImportMap(moduleName) {
   }
 }
 
-let dynamicImportList = false;
 const moduleImportCache = new Map();
 const moduleSourceCache = new Map();
+const modulePreparedCodeCache = new Map();
 
 function normalizeModuleImportPath(path) {
   const modulePath = String(path);
@@ -118,6 +118,35 @@ function getModuleSource(normalizedPath) {
   return sourcePromise;
 }
 
+async function prepareModuleImport(normalizedPath) {
+  const { code, basePath, filename } = await getModuleSource(normalizedPath);
+  return await window.Bundless.transpileCode(code, basePath, filename);
+}
+
+function prepareModuleImportFromList(normalizedPath) {
+  const cachedPreparation = modulePreparedCodeCache.get(normalizedPath);
+  if (cachedPreparation) {
+    return cachedPreparation;
+  }
+
+  const preparationPromise = prepareModuleImport(normalizedPath).catch((error) => {
+    modulePreparedCodeCache.delete(normalizedPath);
+    throw error;
+  });
+  modulePreparedCodeCache.set(normalizedPath, preparationPromise);
+  return preparationPromise;
+}
+
+async function getImportTranspiledCode(normalizedPath) {
+  const preparedCode = modulePreparedCodeCache.get(normalizedPath);
+  if (preparedCode) {
+    return await preparedCode;
+  }
+
+  const { code, basePath, filename } = await getModuleSource(normalizedPath);
+  return await window.Bundless.transpileCode(code, basePath, filename);
+}
+
 function toModulePathList(paths) {
   if (paths == null) {
     throw new TypeError("Bundless.prefetch() requires a module URL or iterable of module URLs.");
@@ -138,43 +167,106 @@ async function prefetchModules(paths) {
   );
 }
 
+async function prepareModulesFromPrefetchList(paths) {
+  const modulePaths = toModulePathList(paths);
+  await Promise.all(
+    modulePaths.map((path) => prepareModuleImportFromList(normalizeModuleImportPath(path)))
+  );
+}
+
+const BUNDLESS_PREFETCH_SELECTOR = "script[data-bundless-prefetch]";
+
+function isApplicationJsonScriptTag(scriptTag) {
+  const type = scriptTag.type || scriptTag.getAttribute?.("type") || "";
+  return String(type).toLowerCase() === "application/json";
+}
+
+function findBundlessPrefetchScriptTags() {
+  return Array.from(document.querySelectorAll(BUNDLESS_PREFETCH_SELECTOR))
+    .filter(isApplicationJsonScriptTag);
+}
+
+function hasBundlessPrefetchScriptTags() {
+  return findBundlessPrefetchScriptTags().length > 0;
+}
+
+function getBundlessPrefetchScriptLabel(scriptTag, index) {
+  return scriptTag.id
+    ? `script#${scriptTag.id}[data-bundless-prefetch]`
+    : `script[data-bundless-prefetch] at index ${index}`;
+}
+
+function parseBundlessPrefetchScriptTag(scriptTag, index) {
+  const label = getBundlessPrefetchScriptLabel(scriptTag, index);
+  let value;
+
+  try {
+    value = JSON.parse(scriptTag.textContent || "");
+  } catch (error) {
+    console.warn(`Bundless prefetch: Ignoring ${label} because it contains malformed JSON.`, error);
+    return [];
+  }
+
+  if (!Array.isArray(value)) {
+    console.warn(`Bundless prefetch: Ignoring ${label}; expected a JSON array of module URL strings.`);
+    return [];
+  }
+
+  return value.filter((modulePath, moduleIndex) => {
+    if (typeof modulePath === "string") {
+      return true;
+    }
+    console.warn(`Bundless prefetch: Ignoring ${label} item ${moduleIndex}; expected a module URL string.`);
+    return false;
+  });
+}
+
+async function handleBundlessPrefetchScriptTags() {
+  const modulePaths = findBundlessPrefetchScriptTags()
+    .flatMap((scriptTag, index) => parseBundlessPrefetchScriptTag(scriptTag, index));
+
+  if (modulePaths.length === 0) {
+    return;
+  }
+
+  await prepareModulesFromPrefetchList(modulePaths);
+}
+
+function startBundlessPrefetches() {
+  const prefetchPromise = handleBundlessPrefetchScriptTags();
+  prefetchPromise.catch((error) => {
+    console.warn("Bundless prefetch: Failed to prepare one or more modules. A later window.import() call will retry normally.", error);
+  });
+  return prefetchPromise;
+}
+
 window.Bundless = {
   ...window.Bundless,
   prefetch: prefetchModules,
 };
 
 async function loadModuleImport(normalizedPath) {
-  // Store previous value and set new one for this import
-  const previousDynamicImportList = dynamicImportList;
-  dynamicImportList = [];
+  const transpiledCode = await getImportTranspiledCode(normalizedPath);
+
+  const blob = new Blob([transpiledCode], { type: "application/javascript" });
+  const url = URL.createObjectURL(blob);
 
   try {
-    const { code, basePath, filename } = await getModuleSource(normalizedPath);
-    const transpiledCode = await window.Bundless.transpileCode(code, basePath, filename);
-    
-    const blob = new Blob([transpiledCode], { type: "application/javascript" });
-    const url = URL.createObjectURL(blob);
-    
-    try {
-      const module = await import(url);
-      return module;
-    } catch (error) {
-      console.error(`Failed to import module from ${url}: ${error.message}`);
-      
-      // Add specific debugging for the destructuring error
-      if (error.message.includes('Cannot destructure property')) {
-        console.warn(`The module at ${normalizedPath} doesn't export the expected properties. Check that all imports match their exports.`);
-        // You could add code here to log the transpiled code for debugging
-        // console.log("Transpiled code:", transpiledCode);
-      }
-      
-      throw error;
-    } finally {
-      URL.revokeObjectURL(url); // Clean up the blob URL
+    const module = await import(url);
+    return module;
+  } catch (error) {
+    console.error(`Failed to import module from ${url}: ${error.message}`);
+
+    // Add specific debugging for the destructuring error
+    if (error.message.includes('Cannot destructure property')) {
+      console.warn(`The module at ${normalizedPath} doesn't export the expected properties. Check that all imports match their exports.`);
+      // You could add code here to log the transpiled code for debugging
+      // console.log("Transpiled code:", transpiledCode);
     }
+
+    throw error;
   } finally {
-    // Always restore the previous value, even if an error occurred
-    dynamicImportList = previousDynamicImportList;
+    URL.revokeObjectURL(url); // Clean up the blob URL
   }
 }
 
@@ -188,6 +280,7 @@ window.import = function (path) {
   const importPromise = loadModuleImport(normalizedPath).catch((error) => {
     moduleImportCache.delete(normalizedPath);
     moduleSourceCache.delete(normalizedPath);
+    modulePreparedCodeCache.delete(normalizedPath);
     throw error;
   });
   moduleImportCache.set(normalizedPath, importPromise);
@@ -195,71 +288,65 @@ window.import = function (path) {
 };
 
 
-let handleImportLine = function (line, currentFilePath, fileName) {  
+let handleImportLine = function (line, currentFilePath, fileName, importList) {
   line = line.replace(/\{/g, ' { ').replace(/\}/g, ' } '); // Brackets NEED spaces
   let importParts = line.trim().split(" ");
-  // console.log('handleImportLine:', {line, currentFilePath, importParts}); 
+  // console.log('handleImportLine:', {line, currentFilePath, importParts});
   let importPath = importParts.at(-1).replaceAll(/['";]/g, "");
 
   // Gather class and variable names
-  let namedExports = []; 
-  let done, inBrackets, defaultExport = false;  
+  let namedExports = [];
+  let done, inBrackets, defaultExport = false;
   let imported = importParts.map((part) => {
       part = part.trim().replaceAll(/['";]/g, "").replaceAll(",", "");
       if (done || ["import"].includes(part)) { return false; }  // Stop start and skip conditions
       if (["}", "from"].includes(part)) { done = true; return false; }
-      if (part == "{") { inBrackets = true; return false; } 
-      let list = dynamicImportList ? dynamicImportList : importList;
-      if (list.includes(part)) { return false; }
-      else { 
-        list.push(part);
+      if (part == "{") { inBrackets = true; return false; }
+      if (importList.includes(part)) { return false; }
+      else {
+        importList.push(part);
         if (inBrackets) { namedExports.push(part); }            // named export
         else { defaultExport = line.includes(' from ') && part; } // default export
         return part;
       }
-    }).filter(Boolean); 
+    }).filter(Boolean);
   if (imported.length == 0) return line;
-  
-  
-  
- 
+
   let alreadyLoaded = window[importParts[1]];
   if (alreadyLoaded) { return line; }
 
-  const useImportMap = !line.includes("."); 
+  const useImportMap = !line.includes(".");
   if (useImportMap) {  const url = isInImportMap(importPath);
-    if (url) { return line.replace( new RegExp(importPath + "(?!.*" + importPath + ")"), url ) } 
+    if (url) { return line.replace( new RegExp(importPath + "(?!.*" + importPath + ")"), url ) }
     else { console.log('Bundless: Import Error:', line); return line; }
   }
-  
-  let importFileName = importPath.split("/").slice(-1)[0];  
-  importPath = importPath.split("/").slice(0, -1).join("/")+"/";
- 
 
-  const isRelativePath = importPath.startsWith(".");  
-  if (isRelativePath) {      
+  let importFileName = importPath.split("/").slice(-1)[0];
+  importPath = importPath.split("/").slice(0, -1).join("/")+"/";
+
+  const isRelativePath = importPath.startsWith(".");
+  if (isRelativePath) {
     currentFilePath = currentFilePath.replace(/\/$/, "");
     let newPath = currentFilePath.split("/");
-    // console.log('getPath:', newPath); 
+    // console.log('getPath:', newPath);
     for (let part of importPath.split("/") ) {
         if (part === "..") { if (newPath.length > 0) {
             newPath.pop();
-        } } 
+        } }
         else if (part !== ".") {
           newPath.push(part);
         }
     }
-    
-    // console.log('getPath:', {currentFilePath, importPath, newPath:newPath.join("/")}); 
-    importPath = newPath.join("/");
- 
 
-  } 
+    // console.log('getPath:', {currentFilePath, importPath, newPath:newPath.join("/")});
+    importPath = newPath.join("/");
+
+  }
 
   if (!window.Bundless.cache) {
     importFileName += `?cachebust=${Date.now()}`;
   }
-  
+
     const isModuleFile = /\.(mjs|js|ts)(\?|$)/.test(importFileName);
     if (isModuleFile) {
     let newLine = transformStaticImportsToDynamic(importPath, importFileName, namedExports, defaultExport);
@@ -270,34 +357,34 @@ let handleImportLine = function (line, currentFilePath, fileName) {
 };
 
 // Calls convertImports on static imports
-const importList = []; 
-async function handleImports(code, pathTo, filename) { 
-  if (!code.includes("import")) {return code;}  
+async function handleImports(code, pathTo, filename) {
+  if (!code.includes("import")) {return code;}
   // const commentedOut = line.trim().startsWith("//");
   // if (commentedOut) { transformedLines.push(line); return; }
-  const transformedLines = code.split("\n").map(async (line) => line.trim().startsWith("import") ? handleImportLine(line, pathTo) : line);
+  const importList = [];
+  const transformedLines = code.split("\n").map(async (line) => line.trim().startsWith("import") ? handleImportLine(line, pathTo, filename, importList) : line);
   let finalCode = (await Promise.all(transformedLines)).join("\n");
   // console.log('handleImports:', finalCode);
-  return finalCode 
+  return finalCode
 }
 
 function toPreact(code){
   if(window.Bundless.to == 'preact'){
     let prefix;
     prefix = `import { h, render } from 'https://esm.sh/preact@10.5.13/es2022/preact.mjs';\n`;
-    prefix += `import { useState, useEffect, useContext, useRef, useMemo } from 'https://esm.sh/preact@10.5.13/es2022/hooks.mjs';\n`; 
-    code = code.replace(/React.createElement/g, "h");  
-    code = code.replace(/ReactDOM.render/g, "render"); 
-    code = code.replace(/React.useState/g, "useState"); 
+    prefix += `import { useState, useEffect, useContext, useRef, useMemo } from 'https://esm.sh/preact@10.5.13/es2022/hooks.mjs';\n`;
+    code = code.replace(/React.createElement/g, "h");
+    code = code.replace(/ReactDOM.render/g, "render");
+    code = code.replace(/React.useState/g, "useState");
     code = code.replace(/React.useEffect/g, "useEffect");
     code = code.replace(/React.useContext/g, "useContext");
     code = code.replace(/React.useRef/g, "useRef");
     code = code.replace(/React.useMemo/g, "useMemo"); // useContext, useMemo
     code = code.replace(/React.Fragment/g, "");
-    
+
     code = code.replace(/import React.*from ['"].*['"];?\n?/g, "");
     code = prefix + code;
-  } 
+  }
   return code;
 }
 
@@ -691,11 +778,11 @@ window.Bundless = {
   transpileCode,
   cache: true,
   to: 'react',
-  prod: false, 
-}; 
+  prod: false,
+};
 
 let SMTools = {};
-async function transformJSX(code, filePath) { 
+async function transformJSX(code, filePath) {
   const ast = Yn(code, {
     module: true,
     jsx: true,
@@ -712,8 +799,8 @@ async function transformJSX(code, filePath) {
     }
   });
 
-  // Update source mapper settings for this specific file 
-  { 
+  // Update source mapper settings for this specific file
+  {
 
     const loadSourceMapTools = async () => {
       console.log('Loading Sucrase');
@@ -721,7 +808,7 @@ async function transformJSX(code, filePath) {
       const { initSourceMapper, setActiveMapper } = await Promise.resolve().then(function () { return bundless_utils_ast_sourecmapper; });
       SMTools = { GenMapping, maybeAddSegment, toEncodedMap, initSourceMapper, setActiveMapper };
       return SMTools
-    }; 
+    };
     SMTools = await loadSourceMapTools();
 
     console.log('~~~~ transformJSX:', 'filePath', filePath);
@@ -731,32 +818,32 @@ async function transformJSX(code, filePath) {
       sourceFilename: filePath,
       sourceCode: code
     });
-    
+
     SMTools.setActiveMapper(sourceMapper);
     SMTools.map = sourceMapper.map;
     SMTools.updatePosition = sourceMapper.updatePosition;
   }
 
   // return JSON.stringify(ast, null, 2);
-    const result = transformAST(ast, { 
-      code, filePath, ...SMTools 
+    const result = transformAST(ast, {
+      code, filePath, ...SMTools
     });
-  let { code: transpiledCode, map } = result;   
-  if(window.Bundless.to === 'preact'){  
+  let { code: transpiledCode, map } = result;
+  if(window.Bundless.to === 'preact'){
     transpiledCode = toPreact(transpiledCode);
   }
   {
-    console.log('transformJSX:',  'map', result.map); 
-    const sourceMapComment = `//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(map))}`; 
-    return `${transpiledCode}\n${sourceMapComment}`; 
-  } 
-} 
- 
-async function transpileCode(code, basePath, filename) { 
+    console.log('transformJSX:',  'map', result.map);
+    const sourceMapComment = `//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(map))}`;
+    return `${transpiledCode}\n${sourceMapComment}`;
+  }
+}
+
+async function transpileCode(code, basePath, filename) {
   // console.log('Transpiler: Transpiling:', filename);
-  const processedCode = await handleImports(code, basePath);  
+  const processedCode = await handleImports(code, basePath, filename);
   // console.log('Processed code: ', processedCode);
-  const transpiledCode = transformJSX(processedCode, basePath + filename);    
+  const transpiledCode = transformJSX(processedCode, basePath + filename);
   return transpiledCode;
 }
 
@@ -766,15 +853,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!scriptTag) {
     console.warn('bundless not found.');
     return;
-  } 
-  const attrs = scriptTag.attributes; 
+  }
+  const attrs = scriptTag.attributes;
   if (attrs.to) {
     window.Bundless.to = attrs.to.value;
   }
-  
-  const scriptTags = document.querySelectorAll("script[type='text/jsx'], script[type='text/babel']"); 
+
+  const hasPrefetchTags = hasBundlessPrefetchScriptTags();
+  if (hasPrefetchTags) {
+    startBundlessPrefetches();
+  }
+
+  const scriptTags = document.querySelectorAll("script[type='text/jsx'], script[type='text/babel']");
   if (scriptTags.length === 0) {
-    console.warn("No JSX scripts found.");
+    if (!hasPrefetchTags) {
+      console.warn("No JSX scripts found.");
+    }
     return;
   }
   for (let scriptTag of scriptTags) {

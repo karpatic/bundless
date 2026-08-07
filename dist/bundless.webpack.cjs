@@ -78,7 +78,8 @@ function stripHtmlRuntimeTags(compiler) {
     if (!HtmlWebpackPlugin) {
       return;
     }
-    HtmlWebpackPlugin.getHooks(compilation).alterAssetTagGroups.tap(
+    const hooks = HtmlWebpackPlugin.getHooks(compilation);
+    hooks.alterAssetTagGroups.tap(
       PLUGIN_NAME,
       (data) => {
         data.headTags = data.headTags.filter(isNotBundlessBootstrapTag);
@@ -86,20 +87,68 @@ function stripHtmlRuntimeTags(compiler) {
         return data;
       }
     );
+    if (hooks.beforeEmit && typeof hooks.beforeEmit.tap === "function") {
+      hooks.beforeEmit.tap(PLUGIN_NAME, (data) => {
+        data.html = stripBundlessPrefetchScriptBlocks(data.html);
+        return data;
+      });
+    }
   });
 }
+function getHtmlAttributeValue(attributes, name) {
+  const normalizedName = name.toLowerCase();
+  const key = Object.keys(attributes || {}).find(
+    (attributeName) => attributeName.toLowerCase() === normalizedName
+  );
+  return key ? attributes[key] : void 0;
+}
+function hasHtmlAttribute(attributes, name) {
+  return getHtmlAttributeValue(attributes, name) !== void 0;
+}
 function isNotBundlessBootstrapTag(tag) {
-  if (tag.tagName !== "script") {
+  if (String(tag.tagName).toLowerCase() !== "script") {
     return true;
   }
   const attrs = tag.attributes || {};
-  const src = String(attrs.src || "");
-  const type = String(attrs.type || "").toLowerCase();
+  const src = String(getHtmlAttributeValue(attrs, "src") || "");
+  const type = String(getHtmlAttributeValue(attrs, "type") || "").toLowerCase();
   const isBundlessRuntime = /bundless\.(acorn|babel|meriyah|sucrase).*\.(m?js)([?#].*)?$/i.test(src);
   const isBundlessSourceScript = /^(text|application)\/(jsx|tsx|babel)$/i.test(
     type
   );
+  const isBundlessPrefetchScript = hasHtmlAttribute(
+    attrs,
+    "data-bundless-prefetch"
+  );
+  const isWebpackIgnored = hasHtmlAttribute(attrs, "data-webpack-ignore");
+  if (isBundlessPrefetchScript && !isWebpackIgnored) {
+    return false;
+  }
   return !isBundlessRuntime && !isBundlessSourceScript;
+}
+function getHtmlAttributeNames(attributeSource) {
+  const names = [];
+  const attributePattern = /([^\s"'<>\/=]+)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?/g;
+  let match;
+  while (match = attributePattern.exec(attributeSource)) {
+    names.push(match[1].toLowerCase());
+  }
+  return names;
+}
+function hasHtmlAttributeName(attributeSource, name) {
+  return getHtmlAttributeNames(attributeSource).includes(name.toLowerCase());
+}
+function shouldStripBundlessPrefetchScript(attributeSource) {
+  return hasHtmlAttributeName(attributeSource, "data-bundless-prefetch") && !hasHtmlAttributeName(attributeSource, "data-webpack-ignore");
+}
+function stripBundlessPrefetchScriptBlocks(html) {
+  if (typeof html !== "string" || !/data-bundless-prefetch/i.test(html)) {
+    return html;
+  }
+  return html.replace(
+    /<script\b((?:"[^"]*"|'[^']*'|[^'">])*)>[\s\S]*?<\/script\s*>/gi,
+    (scriptBlock, attributeSource) => shouldStripBundlessPrefetchScript(attributeSource) ? "" : scriptBlock
+  );
 }
 function bundlessWebpack(config = {}, options = {}) {
   return {

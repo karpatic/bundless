@@ -1,7 +1,7 @@
-import { handleImports, handleScriptTag, toPreact } from './bundless.utils.js'
-import * as sucrase from './../rsc/sucrase/sucrase.esm.js'; 
+import { handleImports, handleScriptTag, hasBundlessPrefetchScriptTags, startBundlessPrefetches, toPreact } from './bundless.utils.js'
+import * as sucrase from './../rsc/sucrase/sucrase.esm.js';
 
-window.Bundless = { 
+window.Bundless = {
   ...window.Bundless,
   transpileCode,
   cache: true,
@@ -13,18 +13,18 @@ function transformJSX(code, filePath) {
   // console.log('transformJSX:', {code, filePath});
   const result = sucrase.transform(
     code, {
-      transforms: ['jsx', 'typescript'], 
+      transforms: ['jsx', 'typescript'],
       sourceMapOptions: { compiledFilename: 'input.js' },
       filePath: filePath
-  });   
+  });
 
 
-  
-  let { code: transpiledCode, sourceMap } = result;   
-  
+
+  let { code: transpiledCode, sourceMap } = result;
+
   const sourceMapComment = `//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(sourceMap))}`;
 
-  if(window.Bundless.to === 'preact'){  
+  if(window.Bundless.to === 'preact'){
     transpiledCode = toPreact(transpiledCode);
   }
 
@@ -32,35 +32,42 @@ function transformJSX(code, filePath) {
   return `${transpiledCode}\n${sourceMapComment}`;
 }
 
-async function transpileCode(code, basePath, filename) { 
-  const processedCode = await handleImports(code, basePath, filename);  
+async function transpileCode(code, basePath, filename) {
+  const processedCode = await handleImports(code, basePath, filename);
   // console.log('transpileCode:', {basePath, filename});
-  const transpiledCode = transformJSX(processedCode, basePath + filename);   
+  const transpiledCode = transformJSX(processedCode, basePath + filename);
   return transpiledCode;
-} 
+}
 
 document.addEventListener("DOMContentLoaded", async () => {
-  let scriptTag = document.querySelector('script[src*="bundless.sucrase"]'); 
+  let scriptTag = document.querySelector('script[src*="bundless.sucrase"]');
   // console.log('Transpiler: Script Tag:', scriptTag);
   if (!scriptTag) {
     console.warn('bundless not found.');
     return;
-  } 
-  
-  const attrs = scriptTag.attributes; 
+  }
+
+  const attrs = scriptTag.attributes;
   if (attrs.to) {
     window.Bundless.to = attrs.to.value
   }
 
-  const scriptTags = document.querySelectorAll("script[type='text/jsx'], script[type='text/babel']"); 
+  const hasPrefetchTags = hasBundlessPrefetchScriptTags();
+  if (hasPrefetchTags) {
+    startBundlessPrefetches();
+  }
+
+  const scriptTags = document.querySelectorAll("script[type='text/jsx'], script[type='text/babel']");
   if (scriptTags.length === 0) {
-    console.warn("No JSX scripts found.");
+    if (!hasPrefetchTags) {
+      console.warn("No JSX scripts found.");
+    }
     return;
-  } 
+  }
 
   for (let scriptTag of scriptTags) {
     await handleScriptTag(scriptTag);
   }
 });
 
- 
+
