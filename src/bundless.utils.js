@@ -499,7 +499,15 @@ function toPreact(code){
     code = code.replace(/React.useMemo/g, "useMemo"); // useContext, useMemo
     code = code.replace(/React.Fragment/g, "");
 
-    code = code.replace(/import\s+[\s\S]*?\s+from ['"]react(?:-dom)?(?:\/[^'"]*)?['"];?\n?/g, "");
+    code = code.replace(
+      STATIC_IMPORT_PATTERN,
+      (statement, indentation, sideEffectQuote, sideEffectSpecifier, importClause, fromQuote, fromSpecifier) => {
+        if (fromSpecifier && isPreactReactPackageImport(fromSpecifier)) {
+          return "";
+        }
+        return statement;
+      }
+    );
     code = prefix + code;
   }
   return code;
