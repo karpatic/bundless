@@ -1,102 +1,82 @@
 # Build more, bundle less.
 
-Create react apps without bundling.
+Create React apps without bundling.
 
 **Bundless.js**: A 36kb browser shim that resolves and transpiles React JSX code at runtime.
 
-[Try it out](https://bundless.dev/examples/playground.html) - [Examples](https://bundless.dev/examples/index.html) - [Benchmarks](https://bundless.dev/benchmarks/index.html)
+[Try it out](https://bundless.dev/examples/playground.html) · [Examples](https://bundless.dev/examples/index.html) · [Benchmarks](https://bundless.dev/benchmarks/index.html) · [Troubleshooting](https://bundless.dev/troubleshooting.html)
 
 ## Usage
 
-All `type='text/jsx'`, `/tsx`, and `/babel` scripts will be transpiled onDomLoad when you place the following tag in your html page:
+Add Bundless to your page, then mark JSX with `type="text/jsx"` or `type="text/babel"`. Bundless transpiles it in the browser when the page loads.
 
-<strong>JSX & Typescript</strong> <a href="/dist/bundless.sucrase.min.js" target="_blank">link</a>: 52Kb | source-maps
+### JSX and TypeScript
 
-
-
-```
-<script src="./bundless.sucrase.min.js"></script>
-```
-
-<strong>JSX Only</strong> <a href="/dist/bundless.acorn.min.js" target="_blank">link</a>: 36Kb | no source-maps
-```
-<script src="./bundless.acorn.min.js"></script>
-```
-
-- Add `to="preact"` if you want your react code transpiled to preact.
-- Add `cache="false"` if you want transformed import URLs to receive a cache-busting query string.
-- Tips on [Toubleshooting](http://localhost:3000/troubleshooting.html)
-
-That's it!
-
-## Module prefetching
-
-Use an inert JSON script when an app already knows which JS, JSX, or TS module URLs it will import soon:
+<strong><a href="/dist/bundless.sucrase.min.js" target="_blank">Sucrase</a>: 52Kb | source-maps</strong>
 
 ```html
-<script type="application/json" data-bundless-prefetch>
-["./components/App.jsx", "./routes/Dashboard.jsx?startup=1"]
+<script src="./dist/bundless.sucrase.min.js"></script>
+```
+
+### JSX only
+
+<strong><a href="/dist/bundless.acorn.min.js" target="_blank">Acorn</a>: 36Kb | no source-maps</strong>
+
+```html
+<script src="./dist/bundless.acorn.min.js"></script>
+```
+
+## Example page
+
+Use `type="text/jsx"` to load JSX from a file:
+
+```html
+<script src="./dist/bundless.acorn.min.js"></script>
+<script src="./App.jsx" type="text/jsx"></script>
+```
+
+Or write JSX directly in the page with `type="text/babel"`:
+
+```html
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@17.0.2/es2022/react.mjs",
+    "react-dom": "https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs"
+  }
+}
+</script>
+
+<div id="react-root"></div>
+
+<script src="./dist/bundless.acorn.min.js"></script>
+<script type="text/babel">
+  import React from "react";
+  import * as ReactDOM from "react-dom";
+
+  function App() {
+    return <h1>Hello World</h1>;
+  }
+
+  ReactDOM.render(<App />, document.getElementById("react-root"));
 </script>
 ```
 
-On `DOMContentLoaded`, Bundless parses all `data-bundless-prefetch` JSON lists, warns and skips malformed blocks or non-string entries, then concurrently fetches and transpiles each listed module without evaluating it. Later `window.import()` calls reuse the prepared code by normalized original URL, so equivalent URLs deduplicate while query strings and cache busters remain distinct. Failed preparations are evicted so retrying can prepare again.
+See more complete, working pages in [Examples](https://bundless.dev/examples/index.html), or open the [playground](https://bundless.dev/examples/playground.html).
 
-`window.Bundless.prefetch()` remains available for script-driven prefetching. It accepts one URL or an iterable of URLs, fetches module source only, and shares the same source-fetch cache that `window.import()` uses when no prepared code is available. Failed prefetches and failed imports are evicted so retries fetch again.
+## Options
 
-## Webpack migration
+- Add `to="preact"` to transpile React code to Preact.
+- Add `cache="false"` to add a cache-busting query string to transformed imports.
+- Use an import map when your JSX imports packages such as React.
 
-Bundless apps can move to Webpack without changing application modules that call `window.import()`:
-
-```js
-const BundlessWebpackPlugin = require("bundlessdev/webpack");
-
-module.exports = {
-  entry: "./src/index.jsx",
-  module: {
-    rules: [
-      {
-        test: /\.[jt]sx?$/,
-        exclude: /node_modules/,
-        use: "babel-loader"
-      }
-    ]
-  },
-  plugins: [new BundlessWebpackPlugin()]
-};
-```
-
-The plugin injects a small pre-loader for JavaScript, JSX, TypeScript, and TSX files. Literal `window.import("./Widget.jsx")` calls become native `import("./Widget.jsx")` expressions so Webpack owns module resolution and chunking. `window.Bundless.prefetch("./Widget.jsx")` and string-array prefetches become Webpack prefetch hints that return a resolved Promise; pass `{ prefetch: "noop" }` to make prefetch calls pure no-ops instead.
-
-Bundless does not transform JSX in Webpack. Keep React imports in your source and configure Babel, SWC, esbuild, or another JSX loader exactly as you normally would.
-
-Use a normal Webpack entry and avoid the browser runtime bootstrap in the built app. Remove the Bundless `<script src="...bundless.*.js">` tag, `type="text/jsx"`/`type="text/babel"` script tags, and `data-bundless-prefetch` JSON tags from your production HTML template, or keep using HtmlWebpackPlugin and let `new BundlessWebpackPlugin()` strip those tags from emitted HTML. Add `data-webpack-ignore` to a `data-bundless-prefetch` block if you need HtmlWebpackPlugin output to preserve it; Webpack does not inspect the list contents. The plugin also aliases Bundless runtime package entry points to `false` by default so accidental runtime imports are not bundled. For manual rule wiring, the loader is exported as `bundlessdev/webpack/loader`.
-
-
-## Source maps
-
-Acorn and Meriyah intentionally split their runtime source-map behavior by build variant. The `.dev.js` variants include runtime inline source maps for debugging. The default/minified variants, such as `bundless.acorn.min.js` and `bundless.meriyah.min.js`, and the explicit `.prod.js` variants omit runtime source maps to avoid production size and runtime overhead.
-
-This policy is specific to the Acorn and Meriyah runtime transpiler paths. Babel and Sucrase keep their existing transpiler-specific source-map behavior rather than following the Acorn/Meriyah dev/prod matrix.
-
+That's it!
 
 ## How it works
 
-1. Modules resolve using `<script type="importmap">`.
-2. Static imports are rewritten to the custom `window.import()` loader.
-3. `data-bundless-prefetch` JSON tags can prepare modules without evaluating them, while `window.Bundless.prefetch()` warms the source-fetch cache only.
-4. `window.import()` reuses any prepared code when present, otherwise reuses fetched source, transpiles it, then imports the transpiled blob.
-5. Repeated or concurrent imports of the same normalized original module URL share the same pending promise and resolved module.
-6. Failed preparations and imports are removed from their caches so the next call can retry, and cache-busting query strings remain part of the cache key.
-
-## Publication
-
-- Git tags now drive the release flow through GitHub Actions.
-- Release builds are expected to be created locally before you tag and push a release.
-- Release bundles are attached to GitHub Releases and can be fetched from the GitHub-backed jsDelivr CDN, for example `https://cdn.jsdelivr.net/gh/karpatic/bundless@v1.0.1/dist/bundless.acorn.min.js`.
-- GitHub Releases are live through `v1.0.10`, and the GitHub-backed jsDelivr route is the current verified CDN path.
-- The npm package `bundlessdev` is published to npmjs, and the same release flow can also publish a GitHub Packages variant as `@karpatic/bundlessdev`.
-- Run `npm test`, run the local release build, bump `package.json` and `package-lock.json`, and then push a version tag like `v1.0.10`; GitHub Actions will use the checked-in `dist` files to create the GitHub Release, publish `bundlessdev` to npm through trusted publishing via OIDC, and publish `@karpatic/bundlessdev` to GitHub Packages with `GITHUB_TOKEN`.
-- The release workflow now runs on version tags instead of every `main` push so release history stays focused on real versioned releases.
+1. Modules resolve through `<script type="importmap">`.
+2. Bundless transpiles JSX in `text/jsx` and `text/babel` scripts.
+3. Imports run in the browser as modules.
 
 ## Memes
 
