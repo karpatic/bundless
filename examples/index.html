@@ -12,7 +12,7 @@
       button { font: inherit; }
       .example-choice { width: 100%; text-align: left; }
       [aria-pressed="true"] { font-weight: bold; }
-      #viewer { margin-top: 1em; }
+      #viewer { margin: 0; }
       #viewer[hidden], [hidden] { display: none; }
       #viewer-controls { margin: .5em 0; }
       #example-code { border: 1px solid; max-height: 18em; overflow: auto; padding: .5em; white-space: pre-wrap; }
@@ -85,77 +85,53 @@
       <thead>
         <tr>
           <th>Example</th>
-          <th>Runtime</th>
-          <th>Target</th>
-          <th>Notes</th>
+          <th>Code / Output</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td><button class="example-choice" type="button" data-url="/examples/acorn_speed_test.html" aria-controls="viewer" aria-expanded="false">Acorn Speed Test</button></td>
-          <td><code>bundless.acorn.min.js</code></td>
-          <td>Preact</td>
-          <td>Inline <code>type="text/babel"</code> example.</td>
+          <td class="example-viewer-cell"></td>
         </tr>
         <tr>
           <td><button class="example-choice" type="button" data-url="/examples/acorn.html" aria-controls="viewer" aria-expanded="false">Acorn + React</button></td>
-          <td><code>bundless.acorn.min.js</code></td>
-          <td>React</td>
-          <td>Default/min build, no runtime inline source maps.</td>
+          <td class="example-viewer-cell"></td>
         </tr>
         <tr>
           <td><button class="example-choice" type="button" data-url="/examples/acorn%20debug.html" aria-controls="viewer" aria-expanded="false">Acorn Dev + React</button></td>
-          <td><code>bundless.acorn.dev.js</code></td>
-          <td>React</td>
-          <td>Dev build with runtime inline source maps for browser debugging.</td>
+          <td class="example-viewer-cell"></td>
         </tr>
         <tr>
           <td><button class="example-choice" type="button" data-url="/examples/acorn_preact.html" aria-controls="viewer" aria-expanded="false">Acorn + Preact</button></td>
-          <td><code>bundless.acorn.min.js</code></td>
-          <td>Preact</td>
-          <td>Uses <code>to="preact"</code>.</td>
+          <td class="example-viewer-cell"></td>
         </tr>
         <tr>
           <td><button class="example-choice" type="button" data-url="/examples/babel.html" aria-controls="viewer" aria-expanded="false">Babel + React</button></td>
-          <td><code>bundless.babel.min.js</code></td>
-          <td>React</td>
-          <td>Single Babel build.</td>
+          <td class="example-viewer-cell"></td>
         </tr>
         <tr>
           <td><button class="example-choice" type="button" data-url="/examples/meriyah.html" aria-controls="viewer" aria-expanded="false">Meriyah + React</button></td>
-          <td><code>bundless.meriyah.min.js</code></td>
-          <td>React</td>
-          <td>Default/min build, no runtime inline source maps.</td>
+          <td class="example-viewer-cell"></td>
         </tr>
         <tr>
           <td><button class="example-choice" type="button" data-url="/examples/meriyah%20debug.html" aria-controls="viewer" aria-expanded="false">Meriyah Dev + React</button></td>
-          <td><code>bundless.meriyah.dev.js</code></td>
-          <td>React</td>
-          <td>Dev build with runtime inline source maps for browser debugging.</td>
+          <td class="example-viewer-cell"></td>
         </tr>
         <tr>
           <td><button class="example-choice" type="button" data-url="/examples/meriyah_preact.html" aria-controls="viewer" aria-expanded="false">Meriyah + Preact</button></td>
-          <td><code>bundless.meriyah.min.js</code></td>
-          <td>Preact</td>
-          <td>Uses <code>to="preact"</code>.</td>
+          <td class="example-viewer-cell"></td>
         </tr>
         <tr>
           <td><button class="example-choice" type="button" data-url="/examples/sucrase.html" aria-controls="viewer" aria-expanded="false">Sucrase + React</button></td>
-          <td><code>bundless.sucrase.min.js</code></td>
-          <td>React</td>
-          <td>Single Sucrase build.</td>
+          <td class="example-viewer-cell"></td>
         </tr>
         <tr>
           <td><button class="example-choice" type="button" data-url="/examples/sucrase%20debug.html" aria-controls="viewer" aria-expanded="false">Sucrase Debug Component + React</button></td>
-          <td><code>bundless.sucrase.min.js</code></td>
-          <td>React</td>
-          <td>Uses a debug component, not a Sucrase dev build.</td>
+          <td class="example-viewer-cell"></td>
         </tr>
         <tr>
           <td><button class="example-choice" type="button" data-url="/examples/sucrase_preact.html" aria-controls="viewer" aria-expanded="false">Sucrase + Preact</button></td>
-          <td><code>bundless.sucrase.min.js</code></td>
-          <td>Preact</td>
-          <td>Uses <code>to="preact"</code>.</td>
+          <td class="example-viewer-cell"></td>
         </tr>
       </tbody>
     </table>
@@ -256,6 +232,8 @@
           return;
         }
 
+        const viewerCell = choice.closest("tr").querySelector(".example-viewer-cell");
+        viewerCell.appendChild(viewer);
         setSelectedChoice(choice);
         viewer.hidden = false;
         viewerTitle.textContent = choice.textContent;
