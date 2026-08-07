@@ -34,6 +34,65 @@
     <h2>Playground</h2>
     <p><a href="./playground.html">Open the playground</a> to try Bundless in the browser.</p>
 
+    <h2 id="prefetching">Prefetching</h2>
+    <p>
+      Declarative <code>&lt;script type="application/json" data-bundless-prefetch&gt;</code> lists module URLs that Bundless fetches and transpiles without evaluating; later <code>window.import()</code> calls reuse that prepared code.
+      <code>window.Bundless.prefetch()</code> accepts one URL or an iterable of URLs and warms the source-fetch cache.
+    </p>
+    <details class="example" data-url="/examples/prefetch.html">
+      <summary>Prefetch + Acorn React</summary>
+    </details>
+
+    <h2>Troubleshooting</h2>
+    <h3>Preact mode</h3>
+    <p>Add <code>to="preact"</code> to the Bundless script tag to transpile React code toward Preact.</p>
+    <ul>
+      <li>Preact portals require a concrete DOM element.</li>
+      <li>Preact context consumers need a matching provider.</li>
+      <li>Preact emits regular DOM events; for direct form handlers, read values synchronously from <code>e.currentTarget.value</code>.</li>
+      <li>Refs can differ by pattern; check whether you received a DOM node or a <code>.current</code> object before calling <code>focus()</code>.</li>
+    </ul>
+
+    <h3>ReactDOM imports</h3>
+    <p>
+      Default imports are currently resolved from <code>module.default</code>, so <code>import ReactDOM from "react-dom"</code> can fail.
+      Prefer named APIs such as <code>import { render } from "react-dom"</code> or <code>import { createRoot } from "react-dom/client"</code>.
+      Namespace imports such as <code>import * as ReactDOM from "react-dom"</code> are also appropriate for runtime paths that preserve namespace imports.
+    </p>
+
+    <h3>Babel standalone</h3>
+    <blockquote>
+      You should use a build system running on Node.js, such as Webpack, Rollup, or Parcel, to transpile your JS ahead of time.
+      <a href="https://babeljs.io/docs/babel-standalone">Babel Docs</a>
+    </blockquote>
+
+    <h2 id="webpack">Move to Webpack</h2>
+    <p>
+      <code>bundlessdev/webpack</code> is the seamless path to a full-fledged bundled environment.
+      It rewrites literal <code>window.import()</code> calls to native imports, converts supported <code>window.Bundless.prefetch()</code> calls into Webpack prefetch hints, and can strip Bundless runtime and prefetch tags from HtmlWebpackPlugin output while the app keeps its normal JSX loader.
+    </p>
+    <pre><code>const BundlessWebpackPlugin = require("bundlessdev/webpack");
+
+module.exports = {
+  module: {
+    rules: [
+      {
+        test: /\.jsx?$/,
+        exclude: /node_modules/,
+        use: "babel-loader",
+      },
+    ],
+  },
+  plugins: [new BundlessWebpackPlugin()],
+};
+</code></pre>
+
+    <h2>Runtime Transpilation</h2>
+    <p>
+      These pages demonstrate React code transpiled at runtime to ES6-compatible React or Preact code using Bundless runtime builds.
+      To use Preact instead of React, include <code>to="preact"</code> in the script tag.
+    </p>
+
     <h2>Acorn</h2>
     <p>
       Acorn 36Kb; <code>bundless.acorn.min.js</code> is the default production-mode package/browser build without runtime inline maps.
@@ -93,65 +152,6 @@
     <details class="example" data-url="/examples/sucrase_preact.html">
       <summary>Sucrase + Preact</summary>
     </details>
-
-    <h2 id="prefetching">Prefetching</h2>
-    <p>
-      Declarative <code>&lt;script type="application/json" data-bundless-prefetch&gt;</code> lists module URLs that Bundless fetches and transpiles without evaluating; later <code>window.import()</code> calls reuse that prepared code.
-      <code>window.Bundless.prefetch()</code> accepts one URL or an iterable of URLs and warms the source-fetch cache.
-    </p>
-    <details class="example" data-url="/examples/prefetch.html">
-      <summary>Prefetch + Acorn React</summary>
-    </details>
-
-    <h2>Troubleshooting</h2>
-    <h3>Preact mode</h3>
-    <p>Add <code>to="preact"</code> to the Bundless script tag to transpile React code toward Preact.</p>
-    <ul>
-      <li>Preact portals require a concrete DOM element.</li>
-      <li>Preact context consumers need a matching provider.</li>
-      <li>Preact emits regular DOM events; for direct form handlers, read values synchronously from <code>e.currentTarget.value</code>.</li>
-      <li>Refs can differ by pattern; check whether you received a DOM node or a <code>.current</code> object before calling <code>focus()</code>.</li>
-    </ul>
-
-    <h3>ReactDOM imports</h3>
-    <p>
-      Default imports are currently resolved from <code>module.default</code>, so <code>import ReactDOM from "react-dom"</code> can fail.
-      Prefer named APIs such as <code>import { render } from "react-dom"</code> or <code>import { createRoot } from "react-dom/client"</code>.
-      Namespace imports such as <code>import * as ReactDOM from "react-dom"</code> are also appropriate for runtime paths that preserve namespace imports.
-    </p>
-
-    <h3>Babel standalone</h3>
-    <blockquote>
-      You should use a build system running on Node.js, such as Webpack, Rollup, or Parcel, to transpile your JS ahead of time.
-      <a href="https://babeljs.io/docs/babel-standalone">Babel Docs</a>
-    </blockquote>
-
-    <h2 id="webpack">Move to Webpack</h2>
-    <p>
-      <code>bundlessdev/webpack</code> is the seamless path to a full-fledged bundled environment.
-      It rewrites literal <code>window.import()</code> calls to native imports, converts supported <code>window.Bundless.prefetch()</code> calls into Webpack prefetch hints, and can strip Bundless runtime and prefetch tags from HtmlWebpackPlugin output while the app keeps its normal JSX loader.
-    </p>
-    <pre><code>const BundlessWebpackPlugin = require("bundlessdev/webpack");
-
-module.exports = {
-  module: {
-    rules: [
-      {
-        test: /\.jsx?$/,
-        exclude: /node_modules/,
-        use: "babel-loader",
-      },
-    ],
-  },
-  plugins: [new BundlessWebpackPlugin()],
-};
-</code></pre>
-
-    <h2>Runtime Transpilation</h2>
-    <p>
-      These pages demonstrate React code transpiled at runtime to ES6-compatible React or Preact code using Bundless runtime builds.
-      To use Preact instead of React, include <code>to="preact"</code> in the script tag.
-    </p>
 
     <script>
       const sourceCache = new Map();
