@@ -21,8 +21,7 @@
   <body>
     <h1>Bundless Usage Docs</h1>
     <p>
-      The homepage is the Getting Started surface. This page keeps the complete runnable inventory,
-      live output, source, and troubleshooting notes at the existing <code>examples/index.html</code> URL.
+      Complete runnable examples for runtime JSX transpilation, prefetching, migration, and troubleshooting.
     </p>
 
     <h2>Site links:</h2>
@@ -32,26 +31,14 @@
       <li><a href="./playground.html">Playground</a></li>
     </ul>
 
-    <h2>Runtime Transpilation</h2>
-    <p>
-      These pages demonstrate React code transpiled at runtime to ES6-compatible React or Preact code using Bundless runtime builds.
-      To use Preact instead of React, include <code>to="preact"</code> in the script tag.
-      No changes to your codebase are required to transition to a bundler.
-    </p>
-
-    <h2>Build Variants</h2>
-    <p>
-      Acorn and Meriyah default/min builds and explicit <code>.prod.js</code> builds omit runtime inline source maps.
-      Their <code>.dev.js</code> builds add runtime inline source maps for browser debugging.
-      Babel and Sucrase are single builds and emit runtime inline source maps.
-    </p>
-
     <h2>Playground</h2>
     <p><a href="./playground.html">Open the playground</a> to try Bundless in the browser.</p>
 
     <h2>Acorn</h2>
     <p>
-      Acorn 36Kb; <code>bundless.acorn.min.js</code> and <code>bundless.acorn.prod.js</code> omit runtime inline source maps, while <code>bundless.acorn.dev.js</code> adds them for browser debugging.
+      Acorn 36Kb; <code>bundless.acorn.min.js</code> is the default production-mode package/browser build without runtime inline maps.
+      <code>bundless.acorn.prod.js</code> is the Terser-minified production option for the smallest deployment.
+      <code>bundless.acorn.dev.js</code> keeps development behavior and runtime inline source maps so browser debugging points back to JSX.
     </p>
     <details class="example" data-url="/examples/acorn_speed_test.html">
       <summary>Acorn Speed Test</summary>
@@ -68,7 +55,10 @@
 
     <h2>Meriyah</h2>
     <p>
-      <code>bundless.meriyah.min.js</code> and <code>bundless.meriyah.prod.js</code> omit runtime inline source maps, while <code>bundless.meriyah.dev.js</code> adds them for browser debugging.
+      Meriyah follows the Acorn-style split for pages that prefer its parser.
+      <code>bundless.meriyah.min.js</code> is the default production-mode package/browser build without runtime inline maps.
+      <code>bundless.meriyah.prod.js</code> is the Terser-minified production option for the smallest deployment.
+      <code>bundless.meriyah.dev.js</code> keeps development behavior and runtime inline source maps so browser debugging points back to JSX.
     </p>
     <details class="example" data-url="/examples/meriyah.html">
       <summary>Meriyah + React</summary>
@@ -82,7 +72,8 @@
 
     <h2>Babel</h2>
     <p>
-      <code>bundless.babel.min.js</code> is a single Babel build rather than dev/prod variants, and it emits runtime inline source maps.
+      Babel is the broad-syntax choice when you want Babel standalone's transform coverage in the browser.
+      <code>bundless.babel.min.js</code> is a single build with its own source maps.
     </p>
     <details class="example" data-url="/examples/babel.html">
       <summary>Babel + React</summary>
@@ -90,7 +81,8 @@
 
     <h2>Sucrase</h2>
     <p>
-      Sucrase 52Kb; <code>bundless.sucrase.min.js</code> is a single Sucrase build rather than dev/prod variants, and it emits runtime inline source maps.
+      Sucrase is the JSX + TypeScript choice.
+      Sucrase 52Kb; <code>bundless.sucrase.min.js</code> is a single build with its own source maps.
     </p>
     <details class="example" data-url="/examples/sucrase.html">
       <summary>Sucrase + React</summary>
@@ -133,6 +125,33 @@
       You should use a build system running on Node.js, such as Webpack, Rollup, or Parcel, to transpile your JS ahead of time.
       <a href="https://babeljs.io/docs/babel-standalone">Babel Docs</a>
     </blockquote>
+
+    <h2 id="webpack">Move to Webpack</h2>
+    <p>
+      <code>bundlessdev/webpack</code> is the seamless path to a full-fledged bundled environment.
+      It rewrites literal <code>window.import()</code> calls to native imports, converts supported <code>window.Bundless.prefetch()</code> calls into Webpack prefetch hints, and can strip Bundless runtime and prefetch tags from HtmlWebpackPlugin output while the app keeps its normal JSX loader.
+    </p>
+    <pre><code>const BundlessWebpackPlugin = require("bundlessdev/webpack");
+
+module.exports = {
+  module: {
+    rules: [
+      {
+        test: /\.jsx?$/,
+        exclude: /node_modules/,
+        use: "babel-loader",
+      },
+    ],
+  },
+  plugins: [new BundlessWebpackPlugin()],
+};
+</code></pre>
+
+    <h2>Runtime Transpilation</h2>
+    <p>
+      These pages demonstrate React code transpiled at runtime to ES6-compatible React or Preact code using Bundless runtime builds.
+      To use Preact instead of React, include <code>to="preact"</code> in the script tag.
+    </p>
 
     <script>
       const sourceCache = new Map();

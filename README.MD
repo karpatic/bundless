@@ -2,7 +2,13 @@
 
 Create React apps without bundling.
 
+React does not require a ceremony just to put a page on the web. Bundless makes ordinary HTML the entry point: serve files, load JSX, edit, refresh, done.
+
 **Bundless.js**: A 36kb browser shim that resolves and transpiles React JSX code at runtime.
+
+Bundless is especially good for multi-page React apps. Each ordinary HTML page can load the JSX it needs. Host the whole thing on any static file server, including GitHub Pages, edit app files directly in github.dev (GitHub's browser VS Code experience) or another editor, and ship without a local Node toolchain or application bundling/build step.
+
+Bundless is an on-ramp, not a trap. When the project needs a full-fledged development environment, [`bundlessdev/webpack`](https://bundless.dev/examples/index.html#webpack) gives it a migration path instead of a Bundless-only architecture.
 
 [Try it out](https://bundless.dev/examples/playground.html) · [Usage Docs](https://bundless.dev/examples/index.html) · [Benchmarks](https://bundless.dev/benchmarks/index.html)
 
