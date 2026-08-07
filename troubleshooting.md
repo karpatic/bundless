@@ -12,7 +12,9 @@ Add `to="preact"` to the tag if you want your react code transpiled to preact. M
 - 👉 Preact Uses `inputRef.focus()` instead of `inputRef.current.focus()`
 - 👉 Preact Uses  `e.currentTarget.value` instead of `e.target.value`
 
-ReactDOM import note[^reactdom-default]
+### ReactDOM import note
+
+In Bundless, default imports are currently resolved from `module.default`. Because of that, `import ReactDOM from 'react-dom'` can fail in this tool. Use `import * as ReactDOM from 'react-dom'` or import named APIs (for example `import { createRoot } from 'react-dom/client'`).
 
 ## A word from Babel
 
@@ -21,5 +23,3 @@ ReactDOM import note[^reactdom-default]
 </blockquote>
 <br>
 LOL
-
-[^reactdom-default]: In Bundless, default imports are currently resolved from `module.default`. Because of that, `import ReactDOM from 'react-dom'` can fail in this tool. Use `import * as ReactDOM from 'react-dom'` or import named APIs (for example `import { createRoot } from 'react-dom/client'`).
