@@ -4,7 +4,7 @@ import test from 'node:test';
 
 const source = await readFile(new URL('../src/bundless.utils.js', import.meta.url), 'utf8');
 const executableSource = source.replace(
-  /\nexport \{handleImports, handleScriptTag, toPreact\};\s*$/,
+  /\nexport \{[^}]+\};\s*$/,
   '\nreturn { handleImports, handleScriptTag, toPreact };'
 );
 
@@ -162,4 +162,37 @@ test('window.import keeps cache-busted URLs as separate cache keys', async () =>
   assert.equal(repeatedBustedImport, firstBustedImport);
   assert.equal(await repeatedBustedImport, firstModule);
   assert.equal(calls.fetch.length, 2);
+});
+
+test('handleImports rewrites multiline local JSX imports through window.import', async () => {
+  const { handleImports } = createHarness();
+  const source = [
+    'import DefaultView, {',
+    '  namedValue,',
+    '  originalName as localName,',
+    "} from './views/panel.jsx?mode=edit#section';",
+    "import * as helpers from '../helpers.tsx';",
+    "import './setup.js';",
+  ].join('\n');
+
+  const transformed = await handleImports(source, 'https://example.test/app/', 'entry.jsx');
+
+  assert.match(transformed, /window\.import\("https:\/\/example\.test\/app\/views\/panel\.jsx\?mode=edit#section"\)/);
+  assert.match(transformed, /const DefaultView =/);
+  assert.match(transformed, /const namedValue =/);
+  assert.match(transformed, /const localName =/);
+  assert.match(transformed, /const helpers = await window\.import\("https:\/\/example\.test\/helpers\.tsx"\)/);
+  assert.match(transformed, /await window\.import\("https:\/\/example\.test\/app\/setup\.js"\)/);
+  assert.doesNotMatch(transformed, /from ['"]\.\/views\/panel\.jsx/);
+});
+
+test('handleImports preserves bare package and non-module local imports', async () => {
+  const { handleImports } = createHarness();
+  const source = [
+    "import React from 'react';",
+    "import styles from './panel.css';",
+    "const lazy = import('./lazy.jsx');",
+  ].join('\n');
+
+  assert.equal(await handleImports(source, 'https://example.test/app/', 'entry.jsx'), source);
 });
