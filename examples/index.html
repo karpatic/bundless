@@ -2,262 +2,218 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Bundless.Dev</title>
+    <title>Bundless Usage Docs</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Acorn Parser Demo" />
+    <meta name="description" content="Bundless Usage Docs for runtime JSX transpilation, prefetching, and troubleshooting." />
     <style>
       body { max-width: 960px; margin: 1em auto; padding: 0 1em; }
-      table { border-collapse: collapse; width: 100%; }
-      th, td { padding: .35em .5em; text-align: left; vertical-align: top; }
-      button { font: inherit; }
-      .example-choice { width: 100%; text-align: left; }
-      [aria-pressed="true"] { font-weight: bold; }
-      #viewer { margin: 0; }
-      #viewer[hidden], [hidden] { display: none; }
-      #viewer-controls { margin: .5em 0; }
-      #example-code { border: 1px solid; max-height: 18em; overflow: auto; padding: .5em; white-space: pre-wrap; }
-      #example-output { border: 1px solid; height: 22em; width: 100%; }
+      h4 { margin: .75em 0 .25em; }
+      .example { margin: .5em 0; }
+      .example summary { cursor: pointer; }
+      .example-view { display: grid; gap: 1em; margin: .5em 0 1em; }
+      pre { border: 1px solid; margin: 0; max-height: 24em; overflow: auto; padding: .5em; white-space: pre-wrap; }
+      iframe { border: 1px solid; box-sizing: border-box; height: 24em; width: 100%; }
+      @media (min-width: 760px) {
+        .example-view { grid-template-columns: 1fr 1fr; }
+      }
     </style>
   </head>
   <body>
-    <h1>Bundless Examples</h1>
-    Many examples listed here are used in the benchmarks.
+    <h1>Bundless Usage Docs</h1>
+    <p>
+      The homepage is the Getting Started surface. This page keeps the complete runnable inventory,
+      live output, source, and troubleshooting notes at the existing <code>examples/index.html</code> URL.
+    </p>
+
     <h2>Site links:</h2>
     <ul>
-      <li><a href="/index.html">Home</a></li>
+      <li><a href="/index.html">Getting Started</a></li>
       <li><a href="/benchmarks/index.html">Benchmarks</a></li>
-      <li><a href="./playground.html">Try it out</a></li>
-    </ul> 
+      <li><a href="./playground.html">Playground</a></li>
+    </ul>
 
-    <h2>React and Preact Transpilation</h2>
+    <h2>Runtime Transpilation</h2>
     <p>
-      The examples on this site demonstrate React code that gets transpiled at runtime to either ES6-compatible React or Preact code using Bundless runtime builds.
-      To use Preact instead of React, include the attribute <code>to="preact"</code> in the script tag. This allows you to switch between 
-      React and Preact seamlessly, depending on your requirements. No changes to your codebase are required to transition to a bundler.
+      These pages demonstrate React code transpiled at runtime to ES6-compatible React or Preact code using Bundless runtime builds.
+      To use Preact instead of React, include <code>to="preact"</code> in the script tag.
+      No changes to your codebase are required to transition to a bundler.
     </p>
 
     <h2>Build Variants</h2>
     <p>
-      Acorn and Meriyah have default/min and explicit prod builds without runtime inline source maps. Their <code>.dev.js</code> builds add runtime inline source maps so browser debugging can point back to the JSX source. Babel and Sucrase have single builds; they are not split into the same dev/prod matrix.
+      Acorn and Meriyah default/min builds and explicit <code>.prod.js</code> builds omit runtime inline source maps.
+      Their <code>.dev.js</code> builds add runtime inline source maps for browser debugging.
+      Babel and Sucrase are single builds and emit runtime inline source maps.
     </p>
 
-    <table border="1">
-      <thead>
-        <tr>
-          <th>Runtime</th>
-          <th>Builds</th>
-          <th>Runtime inline source maps</th>
-          <th>Notes</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Acorn</td>
-          <td><code>bundless.acorn.min.js</code>, <code>bundless.acorn.prod.js</code>, <code>bundless.acorn.dev.js</code></td>
-          <td>Only <code>.dev.js</code></td>
-          <td>Acorn 36Kb. Lightweight JSX runtime.</td>
-        </tr>
-        <tr>
-          <td>Meriyah</td>
-          <td><code>bundless.meriyah.min.js</code>, <code>bundless.meriyah.prod.js</code>, <code>bundless.meriyah.dev.js</code></td>
-          <td>Only <code>.dev.js</code></td>
-          <td>Fast JSX parser alternative.</td>
-        </tr>
-        <tr>
-          <td>Babel</td>
-          <td><code>bundless.babel.min.js</code></td>
-          <td>Single build with Babel source maps</td>
-          <td>Broad syntax support.</td>
-        </tr>
-        <tr>
-          <td>Sucrase</td>
-          <td><code>bundless.sucrase.min.js</code></td>
-          <td>Single build with Sucrase source maps</td>
-          <td>Sucrase 52Kb. JSX and TypeScript transform support.</td>
-        </tr>
-      </tbody>
-    </table>
+    <h2>Playground</h2>
+    <p><a href="./playground.html">Open the playground</a> to try Bundless in the browser.</p>
 
-    <h2>Examples:</h2>
-    <p>Choose an example to view its source or run it without leaving this page.</p>
+    <h2>Acorn</h2>
+    <p>
+      Acorn 36Kb; <code>bundless.acorn.min.js</code> and <code>bundless.acorn.prod.js</code> omit runtime inline source maps, while <code>bundless.acorn.dev.js</code> adds them for browser debugging.
+    </p>
+    <details class="example" data-url="/examples/acorn_speed_test.html">
+      <summary>Acorn Speed Test</summary>
+    </details>
+    <details class="example" data-url="/examples/acorn.html">
+      <summary>Acorn + React</summary>
+    </details>
+    <details class="example" data-url="/examples/acorn%20debug.html">
+      <summary>Acorn Dev + React</summary>
+    </details>
+    <details class="example" data-url="/examples/acorn_preact.html">
+      <summary>Acorn + Preact</summary>
+    </details>
 
-    <table border="1" aria-label="Bundless example choices">
-      <thead>
-        <tr>
-          <th>Example</th>
-          <th>Code / Output</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><button class="example-choice" type="button" data-url="/examples/acorn_speed_test.html" aria-controls="viewer" aria-expanded="false">Acorn Speed Test</button></td>
-          <td class="example-viewer-cell"></td>
-        </tr>
-        <tr>
-          <td><button class="example-choice" type="button" data-url="/examples/acorn.html" aria-controls="viewer" aria-expanded="false">Acorn + React</button></td>
-          <td class="example-viewer-cell"></td>
-        </tr>
-        <tr>
-          <td><button class="example-choice" type="button" data-url="/examples/acorn%20debug.html" aria-controls="viewer" aria-expanded="false">Acorn Dev + React</button></td>
-          <td class="example-viewer-cell"></td>
-        </tr>
-        <tr>
-          <td><button class="example-choice" type="button" data-url="/examples/acorn_preact.html" aria-controls="viewer" aria-expanded="false">Acorn + Preact</button></td>
-          <td class="example-viewer-cell"></td>
-        </tr>
-        <tr>
-          <td><button class="example-choice" type="button" data-url="/examples/babel.html" aria-controls="viewer" aria-expanded="false">Babel + React</button></td>
-          <td class="example-viewer-cell"></td>
-        </tr>
-        <tr>
-          <td><button class="example-choice" type="button" data-url="/examples/meriyah.html" aria-controls="viewer" aria-expanded="false">Meriyah + React</button></td>
-          <td class="example-viewer-cell"></td>
-        </tr>
-        <tr>
-          <td><button class="example-choice" type="button" data-url="/examples/meriyah%20debug.html" aria-controls="viewer" aria-expanded="false">Meriyah Dev + React</button></td>
-          <td class="example-viewer-cell"></td>
-        </tr>
-        <tr>
-          <td><button class="example-choice" type="button" data-url="/examples/meriyah_preact.html" aria-controls="viewer" aria-expanded="false">Meriyah + Preact</button></td>
-          <td class="example-viewer-cell"></td>
-        </tr>
-        <tr>
-          <td><button class="example-choice" type="button" data-url="/examples/sucrase.html" aria-controls="viewer" aria-expanded="false">Sucrase + React</button></td>
-          <td class="example-viewer-cell"></td>
-        </tr>
-        <tr>
-          <td><button class="example-choice" type="button" data-url="/examples/sucrase%20debug.html" aria-controls="viewer" aria-expanded="false">Sucrase Debug Component + React</button></td>
-          <td class="example-viewer-cell"></td>
-        </tr>
-        <tr>
-          <td><button class="example-choice" type="button" data-url="/examples/sucrase_preact.html" aria-controls="viewer" aria-expanded="false">Sucrase + Preact</button></td>
-          <td class="example-viewer-cell"></td>
-        </tr>
-      </tbody>
-    </table>
+    <h2>Meriyah</h2>
+    <p>
+      <code>bundless.meriyah.min.js</code> and <code>bundless.meriyah.prod.js</code> omit runtime inline source maps, while <code>bundless.meriyah.dev.js</code> adds them for browser debugging.
+    </p>
+    <details class="example" data-url="/examples/meriyah.html">
+      <summary>Meriyah + React</summary>
+    </details>
+    <details class="example" data-url="/examples/meriyah%20debug.html">
+      <summary>Meriyah Dev + React</summary>
+    </details>
+    <details class="example" data-url="/examples/meriyah_preact.html">
+      <summary>Meriyah + Preact</summary>
+    </details>
 
-    <section id="viewer" hidden aria-live="polite">
-      <h2 id="viewer-title">Example Viewer</h2>
-      <div id="viewer-controls" role="tablist" aria-label="Example viewer controls">
-        <button id="show-code" type="button" role="tab" aria-selected="true" aria-controls="code-panel">Code</button>
-        <button id="show-output" type="button" role="tab" aria-selected="false" aria-controls="output-panel">Output</button>
-        <button id="close-viewer" type="button">Close</button>
-      </div>
-      <p id="viewer-status" aria-live="polite"></p>
-      <div id="code-panel" role="tabpanel" aria-labelledby="show-code">
-        <pre id="example-code"></pre>
-      </div>
-      <div id="output-panel" role="tabpanel" aria-labelledby="show-output" hidden>
-        <iframe id="example-output" title="Selected example output"></iframe>
-      </div>
-    </section>
+    <h2>Babel</h2>
+    <p>
+      <code>bundless.babel.min.js</code> is a single Babel build rather than dev/prod variants, and it emits runtime inline source maps.
+    </p>
+    <details class="example" data-url="/examples/babel.html">
+      <summary>Babel + React</summary>
+    </details>
+
+    <h2>Sucrase</h2>
+    <p>
+      Sucrase 52Kb; <code>bundless.sucrase.min.js</code> is a single Sucrase build rather than dev/prod variants, and it emits runtime inline source maps.
+    </p>
+    <details class="example" data-url="/examples/sucrase.html">
+      <summary>Sucrase + React</summary>
+    </details>
+    <details class="example" data-url="/examples/sucrase%20debug.html">
+      <summary>Sucrase Debug Component + React</summary>
+    </details>
+    <details class="example" data-url="/examples/sucrase_preact.html">
+      <summary>Sucrase + Preact</summary>
+    </details>
+
+    <h2 id="prefetching">Prefetching</h2>
+    <p>
+      Declarative <code>&lt;script type="application/json" data-bundless-prefetch&gt;</code> lists module URLs that Bundless fetches and transpiles without evaluating; later <code>window.import()</code> calls reuse that prepared code.
+      <code>window.Bundless.prefetch()</code> accepts one URL or an iterable of URLs and warms the source-fetch cache.
+    </p>
+    <details class="example" data-url="/examples/prefetch.html">
+      <summary>Prefetch + Acorn React</summary>
+    </details>
+
+    <h2>Troubleshooting</h2>
+    <h3>Preact mode</h3>
+    <p>Add <code>to="preact"</code> to the Bundless script tag to transpile React code toward Preact.</p>
+    <ul>
+      <li>Preact portals require a concrete DOM element.</li>
+      <li>Preact context consumers need a matching provider.</li>
+      <li>Preact emits regular DOM events; for direct form handlers, read values synchronously from <code>e.currentTarget.value</code>.</li>
+      <li>Refs can differ by pattern; check whether you received a DOM node or a <code>.current</code> object before calling <code>focus()</code>.</li>
+    </ul>
+
+    <h3>ReactDOM imports</h3>
+    <p>
+      Default imports are currently resolved from <code>module.default</code>, so <code>import ReactDOM from "react-dom"</code> can fail.
+      Prefer named APIs such as <code>import { render } from "react-dom"</code> or <code>import { createRoot } from "react-dom/client"</code>.
+      Namespace imports such as <code>import * as ReactDOM from "react-dom"</code> are also appropriate for runtime paths that preserve namespace imports.
+    </p>
+
+    <h3>Babel standalone</h3>
+    <blockquote>
+      You should use a build system running on Node.js, such as Webpack, Rollup, or Parcel, to transpile your JS ahead of time.
+      <a href="https://babeljs.io/docs/babel-standalone">Babel Docs</a>
+    </blockquote>
 
     <script>
-      const viewer = document.getElementById("viewer");
-      const viewerTitle = document.getElementById("viewer-title");
-      const viewerStatus = document.getElementById("viewer-status");
-      const codePanel = document.getElementById("code-panel");
-      const outputPanel = document.getElementById("output-panel");
-      const codeButton = document.getElementById("show-code");
-      const outputButton = document.getElementById("show-output");
-      const closeButton = document.getElementById("close-viewer");
-      const codeBlock = document.getElementById("example-code");
-      const outputFrame = document.getElementById("example-output");
-      const choices = Array.from(document.querySelectorAll(".example-choice"));
-      const fetchedCode = new Map();
-      let activeChoice = null;
+      const sourceCache = new Map();
 
-      function setSelectedChoice(choice) {
-        choices.forEach((button) => {
-          const isActive = button === choice;
-          button.setAttribute("aria-expanded", String(isActive));
-          button.setAttribute("aria-pressed", String(isActive));
-        });
-        activeChoice = choice;
-      }
-
-      function closeViewer() {
-        viewer.hidden = true;
-        viewerStatus.textContent = "";
-        outputFrame.removeAttribute("src");
-        setSelectedChoice(null);
-      }
-
-      function showPanel(panel) {
-        const isCode = panel === "code";
-        codePanel.hidden = !isCode;
-        outputPanel.hidden = isCode;
-        codeButton.setAttribute("aria-selected", String(isCode));
-        outputButton.setAttribute("aria-selected", String(!isCode));
-      }
-
-      async function showCode(choice) {
-        const url = choice.dataset.url;
-        showPanel("code");
-        viewerStatus.textContent = "Loading source...";
-        codeBlock.textContent = "";
-
-        try {
-          if (!fetchedCode.has(url)) {
-            const response = await fetch(url);
-            if (!response.ok) {
-              throw new Error(`${response.status} ${response.statusText}`);
-            }
-            fetchedCode.set(url, await response.text());
-          }
-          if (activeChoice !== choice) {
-            return;
-          }
-          codeBlock.textContent = fetchedCode.get(url);
-          viewerStatus.textContent = `Showing source for ${choice.textContent}.`;
-        } catch (error) {
-          if (activeChoice !== choice) {
-            return;
-          }
-          codeBlock.textContent = "";
-          viewerStatus.textContent = `Could not load ${url}: ${error.message}. This viewer needs the examples to be served over HTTP.`;
+      function fetchSource(url) {
+        if (sourceCache.has(url)) {
+          return sourceCache.get(url);
         }
+
+        const sourcePromise = fetch(url)
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status} ${response.statusText || "error"}`);
+            }
+            return response.text();
+          })
+          .catch((error) => {
+            sourceCache.delete(url);
+            throw error;
+          });
+
+        sourceCache.set(url, sourcePromise);
+        return sourcePromise;
       }
 
-      function showOutput(choice) {
-        showPanel("output");
-        outputFrame.title = `${choice.textContent} output`;
-        outputFrame.src = choice.dataset.url;
-        viewerStatus.textContent = `Running ${choice.textContent}.`;
+      function mountExample(details) {
+        const existingCode = details.querySelector("pre code");
+        if (existingCode) {
+          return existingCode;
+        }
+
+        const url = details.dataset.url;
+        const label = details.querySelector("summary").textContent.trim();
+        const view = document.createElement("div");
+        const sourceSection = document.createElement("section");
+        const sourceHeading = document.createElement("h4");
+        const pre = document.createElement("pre");
+        const code = document.createElement("code");
+        const outputSection = document.createElement("section");
+        const outputHeading = document.createElement("h4");
+        const iframe = document.createElement("iframe");
+
+        view.className = "example-view";
+        sourceHeading.textContent = "Source";
+        code.textContent = "Loading source...";
+        outputHeading.textContent = "Output";
+        iframe.title = `${label} output`;
+        iframe.src = url;
+
+        pre.appendChild(code);
+        sourceSection.append(sourceHeading, pre);
+        outputSection.append(outputHeading, iframe);
+        view.append(sourceSection, outputSection);
+        details.appendChild(view);
+
+        return code;
       }
 
-      function openExample(choice) {
-        if (activeChoice === choice && !viewer.hidden) {
-          closeViewer();
+      async function loadExample(details) {
+        if (details.dataset.sourceLoaded === "true") {
           return;
         }
 
-        const viewerCell = choice.closest("tr").querySelector(".example-viewer-cell");
-        viewerCell.appendChild(viewer);
-        setSelectedChoice(choice);
-        viewer.hidden = false;
-        viewerTitle.textContent = choice.textContent;
-        showCode(choice);
+        const code = mountExample(details);
+        const url = details.dataset.url;
+
+        try {
+          code.textContent = await fetchSource(url);
+          details.dataset.sourceLoaded = "true";
+        } catch (error) {
+          code.textContent = `Could not load ${url}: ${error.message}. Serve this page over HTTP so fetch() can read the example file.`;
+        }
       }
 
-      choices.forEach((choice) => {
-        choice.addEventListener("click", () => openExample(choice));
+      document.querySelectorAll("details.example").forEach((details) => {
+        details.addEventListener("toggle", () => {
+          if (details.open) {
+            loadExample(details);
+          }
+        });
       });
-      setSelectedChoice(null);
-
-      codeButton.addEventListener("click", () => {
-        if (activeChoice) {
-          showCode(activeChoice);
-        }
-      });
-
-      outputButton.addEventListener("click", () => {
-        if (activeChoice) {
-          showOutput(activeChoice);
-        }
-      });
-
-      closeButton.addEventListener("click", closeViewer);
     </script>
   </body>
 </html>

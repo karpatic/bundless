@@ -4,9 +4,9 @@ Create React apps without bundling.
 
 **Bundless.js**: A 36kb browser shim that resolves and transpiles React JSX code at runtime.
 
-[Try it out](https://bundless.dev/examples/playground.html) · [Examples](https://bundless.dev/examples/index.html) · [Benchmarks](https://bundless.dev/benchmarks/index.html) · [Troubleshooting](https://bundless.dev/troubleshooting.html)
+[Try it out](https://bundless.dev/examples/playground.html) · [Usage Docs](https://bundless.dev/examples/index.html) · [Benchmarks](https://bundless.dev/benchmarks/index.html)
 
-## Usage
+## Getting Started
 
 Add Bundless to your page, then mark JSX with `type="text/jsx"` or `type="text/babel"`. Bundless transpiles it in the browser when the page loads.
 
@@ -24,9 +24,9 @@ Add Bundless to your page, then mark JSX with `type="text/jsx"` or `type="text/b
 <script src="./dist/bundless.sucrase.min.js" type="module"></script>
 ```
 
-Use Sucrase when you need JSX and TypeScript syntax. Babel and Meriyah are also available; see the [examples grid](https://bundless.dev/examples/index.html) for working pages and the full build matrix.
+Use Sucrase when you need JSX and TypeScript syntax. Babel and Meriyah are also available; see the [Usage Docs](https://bundless.dev/examples/index.html) for working pages and the full build matrix.
 
-## Example page
+## Starter page
 
 Use `type="text/jsx"` to load JSX from a file:
 
@@ -62,12 +62,13 @@ Or write JSX directly in the page with `type="text/babel"`:
 </script>
 ```
 
-See more complete, working pages in [Examples](https://bundless.dev/examples/index.html), or open the [playground](https://bundless.dev/examples/playground.html).
+See more complete, working pages in the [Usage Docs](https://bundless.dev/examples/index.html), or open the [playground](https://bundless.dev/examples/playground.html).
 
 ## Options
 
 - Add `to="preact"` to transpile React code to Preact.
 - Use an import map when your JSX imports packages such as React.
+- Modules can be prefetched with [`data-bundless-prefetch`](https://bundless.dev/examples/index.html#prefetching) or [`window.Bundless.prefetch()`](https://bundless.dev/examples/index.html#prefetching).
 
 That's it!
 
