@@ -1,4 +1,4 @@
-import { handleImports, handleScriptTag, hasBundlessPrefetchScriptTags, startBundlessPrefetches, toPreact } from './bundless.utils.js'
+import { handleImports, handleScriptTag, hasBundlessPrefetchScriptTags, runWhenDocumentReady, startBundlessPrefetches, toPreact } from './bundless.utils.js'
 import * as sucrase from './../rsc/sucrase/sucrase.esm.js';
 
 window.Bundless = {
@@ -39,7 +39,7 @@ async function transpileCode(code, basePath, filename) {
   return transpiledCode;
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
+runWhenDocumentReady(async () => {
   let scriptTag = document.querySelector('script[src*="bundless.sucrase"]');
   // console.log('Transpiler: Script Tag:', scriptTag);
   if (!scriptTag) {
@@ -69,5 +69,4 @@ document.addEventListener("DOMContentLoaded", async () => {
     await handleScriptTag(scriptTag);
   }
 });
-
 

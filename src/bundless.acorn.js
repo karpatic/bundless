@@ -2,7 +2,7 @@
 import { Parser } from "../rsc/acorn/acorn.min.mjs";
 import acornJsxPlugin from "../rsc/acorn/acorn.jsx.min.mjs";
 import { transformAST } from './bundless.utils.ast.transpiler.js';
-import { handleImports, handleScriptTag, hasBundlessPrefetchScriptTags, startBundlessPrefetches, toPreact } from './bundless.utils.js'
+import { handleImports, handleScriptTag, hasBundlessPrefetchScriptTags, runWhenDocumentReady, startBundlessPrefetches, toPreact } from './bundless.utils.js'
 
 window.Bundless = {
   ...window.Bundless,
@@ -72,7 +72,7 @@ async function transpileCode(code, pathTo, filename) {
   return transpiledCode;
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
+runWhenDocumentReady(async () => {
   let scriptTag = document.querySelector('script[src*="bundless.acorn"], script[src*="bundless.babel"]');
   // console.log('Transpiler: Script Tag:', scriptTag);
   if (!scriptTag) {

@@ -1,5 +1,5 @@
 import * as meriyah from "./../rsc/meriyah/meriyah.esm.js";
-import { handleImports, handleScriptTag, hasBundlessPrefetchScriptTags, startBundlessPrefetches, toPreact } from './bundless.utils.js'
+import { handleImports, handleScriptTag, hasBundlessPrefetchScriptTags, runWhenDocumentReady, startBundlessPrefetches, toPreact } from './bundless.utils.js'
 import { transformAST } from './bundless.utils.ast.transpiler.js';
 
 
@@ -82,7 +82,7 @@ async function transpileCode(code, basePath, filename) {
   return transpiledCode;
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
+runWhenDocumentReady(async () => {
   let scriptTag = document.querySelector('script[src*="bundless.meriyah"], script[src*="bundless.babel"]');
   // console.log('Transpiler: Script Tag:', scriptTag);
   if (!scriptTag) {

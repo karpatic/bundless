@@ -396,26 +396,151 @@ function transformAST(ast, debug = {}) {
 
 // transpile.js
 
-// This transforms static import statements into dynamic import expressions
-function transformStaticImportsToDynamic(importPath, importFileName, namedExports, defaultExport) {
-  let dynamicImportCode = '';
+const STATIC_IMPORT_PATTERN = /^([ \t]*)import\s+(?:(['"])([^'"]+)\2|(?:([\s\S]*?)\s+from\s*(['"])([^'"]+)\5))[ \t]*;?[ \t]*(?=\r?\n|$)/gm;
+const LOCAL_MODULE_IMPORT_PATTERN = /^(?:\.{1,2}\/|\/)/;
+const MODULE_FILE_EXTENSION_PATTERN = /\.(?:mjs|jsx?|tsx?)$/i;
+const IDENTIFIER_PROPERTY_PATTERN = /^[A-Za-z_$][\w$]*$/;
 
-  // Handle default export
-  if (defaultExport) {
-    dynamicImportCode += `const ${defaultExport} = await window.import('${importPath}${importFileName}').then(m => m.default); `;
+function splitImportSpecifiers(specifiers) {
+  return specifiers
+    .split(",")
+    .map((specifier) => specifier.trim())
+    .filter(Boolean);
+}
+
+function normalizeImportName(name) {
+  const trimmed = name.trim();
+  const quote = trimmed[0];
+  if ((quote === "'" || quote === '"') && trimmed[trimmed.length - 1] === quote) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+function parseNamedImportSpecifiers(specifiers) {
+  return splitImportSpecifiers(specifiers)
+    .map((specifier) => {
+      if (/^type\s+/.test(specifier)) {
+        return false;
+      }
+
+      const alias = specifier.match(/^(.+?)\s+as\s+(.+)$/);
+      const imported = normalizeImportName(alias ? alias[1] : specifier);
+      const local = normalizeImportName(alias ? alias[2] : specifier);
+      return { imported, local };
+    })
+    .filter(Boolean);
+}
+
+function parseImportClause(importClause) {
+  const imports = {
+    defaultImport: false,
+    namespaceImport: false,
+    namedImports: [],
+    typeOnly: false,
+  };
+
+  if (!importClause) {
+    return imports;
   }
 
-  // Handle named exports - FIXED to use window.import with full path including filename
-  if (namedExports.length > 0) {
-    dynamicImportCode += `const {${namedExports.join(", ")}} = await window.import('${importPath}${importFileName}'); `;
+  const clause = importClause.trim();
+  if (/^type\b/.test(clause)) {
+    imports.typeOnly = true;
+    return imports;
   }
 
-  // Handle entire file
-  if (namedExports.length == 0 && !defaultExport) {
-    dynamicImportCode += `await window.import('${importPath}${importFileName}'); `;
+  let remainingClause = clause;
+  const namedImportMatch = remainingClause.match(/\{([\s\S]*)\}/);
+  if (namedImportMatch) {
+    imports.namedImports = parseNamedImportSpecifiers(namedImportMatch[1]);
+    remainingClause = remainingClause.replace(namedImportMatch[0], "");
   }
 
-  return dynamicImportCode;
+  const namespaceImportMatch = remainingClause.match(/\*\s+as\s+([^,\s]+)/);
+  if (namespaceImportMatch) {
+    imports.namespaceImport = namespaceImportMatch[1];
+    remainingClause = remainingClause.replace(namespaceImportMatch[0], "");
+  }
+
+  const defaultImport = remainingClause.replace(/,/g, " ").trim();
+  if (defaultImport) {
+    imports.defaultImport = defaultImport.split(/\s+/)[0];
+  }
+
+  return imports;
+}
+
+function getModuleUrlBase(currentFilePath) {
+  const basePath = currentFilePath || location.href;
+  const normalizedBasePath = /\/$/.test(basePath) ? basePath : `${basePath}/`;
+  return new URL(normalizedBasePath, location.href);
+}
+
+function isTransformableLocalModuleImport(specifier) {
+  if (!LOCAL_MODULE_IMPORT_PATTERN.test(specifier)) {
+    return false;
+  }
+
+  try {
+    return MODULE_FILE_EXTENSION_PATTERN.test(new URL(specifier, location.href).pathname);
+  } catch (error) {
+    return MODULE_FILE_EXTENSION_PATTERN.test(specifier.split(/[?#]/)[0]);
+  }
+}
+
+function resolveLocalModuleImport(specifier, currentFilePath) {
+  const url = new URL(specifier, getModuleUrlBase(currentFilePath));
+  if (!window.Bundless.cache) {
+    url.searchParams.set("cachebust", Date.now());
+  }
+  return url.href;
+}
+
+function getModuleProperty(imported) {
+  if (IDENTIFIER_PROPERTY_PATTERN.test(imported)) {
+    return `.${imported}`;
+  }
+  return `[${JSON.stringify(imported)}]`;
+}
+
+function addImportBinding(importState, local) {
+  if (importState.importedLocals.has(local)) {
+    return false;
+  }
+  importState.importedLocals.add(local);
+  return true;
+}
+
+// This transforms local static import statements into dynamic import expressions.
+function transformStaticImportsToDynamic(importClause, moduleUrl, importState) {
+  const imports = parseImportClause(importClause);
+  if (imports.typeOnly) {
+    return "";
+  }
+
+  const modulePath = JSON.stringify(moduleUrl);
+  const statements = [];
+
+  if (imports.defaultImport && addImportBinding(importState, imports.defaultImport)) {
+    statements.push(`const ${imports.defaultImport} = await window.import(${modulePath}).then(m => m.default);`);
+  }
+
+  if (imports.namespaceImport && addImportBinding(importState, imports.namespaceImport)) {
+    statements.push(`const ${imports.namespaceImport} = await window.import(${modulePath});`);
+  }
+
+  for (const namedImport of imports.namedImports) {
+    if (addImportBinding(importState, namedImport.local)) {
+      statements.push(`const ${namedImport.local} = await window.import(${modulePath}).then(m => m${getModuleProperty(namedImport.imported)});`);
+    }
+  }
+
+  if (statements.length === 0 && !importClause) {
+    statements.push(`await window.import(${modulePath});`);
+  }
+
+  return statements.join(" ");
 }
 
 
@@ -445,19 +570,6 @@ async function handleScriptTag(scriptTag) {
   script.type = "module";
   script.textContent = transpiledCode;
   document.body.appendChild(script);
-}
-
-function isInImportMap(moduleName) {
-  const scriptTag = document.querySelector('script[type="importmap"]');
-  if (!scriptTag) return false;
-
-  try {
-    const importMap = JSON.parse(scriptTag.textContent);
-    return importMap.imports && importMap.imports[moduleName];
-  } catch (error) {
-    console.warning("Bundless: Import map not found:", error);
-    return false;
-  }
 }
 
 const moduleImportCache = new Map();
@@ -628,6 +740,14 @@ function startBundlessPrefetches() {
   return prefetchPromise;
 }
 
+function runWhenDocumentReady(callback) {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", callback);
+    return;
+  }
+  callback();
+}
+
 window.Bundless = {
   ...window.Bundless,
   prefetch: prefetchModules,
@@ -676,84 +796,25 @@ window.import = function (path) {
 };
 
 
-let handleImportLine = function (line, currentFilePath, fileName, importList) {
-  line = line.replace(/\{/g, ' { ').replace(/\}/g, ' } '); // Brackets NEED spaces
-  let importParts = line.trim().split(" ");
-  // console.log('handleImportLine:', {line, currentFilePath, importParts});
-  let importPath = importParts.at(-1).replaceAll(/['";]/g, "");
-
-  // Gather class and variable names
-  let namedExports = [];
-  let done, inBrackets, defaultExport = false;
-  let imported = importParts.map((part) => {
-      part = part.trim().replaceAll(/['";]/g, "").replaceAll(",", "");
-      if (done || ["import"].includes(part)) { return false; }  // Stop start and skip conditions
-      if (["}", "from"].includes(part)) { done = true; return false; }
-      if (part == "{") { inBrackets = true; return false; }
-      if (importList.includes(part)) { return false; }
-      else {
-        importList.push(part);
-        if (inBrackets) { namedExports.push(part); }            // named export
-        else { defaultExport = line.includes(' from ') && part; } // default export
-        return part;
-      }
-    }).filter(Boolean);
-  if (imported.length == 0) return line;
-
-  let alreadyLoaded = window[importParts[1]];
-  if (alreadyLoaded) { return line; }
-
-  const useImportMap = !line.includes(".");
-  if (useImportMap) {  const url = isInImportMap(importPath);
-    if (url) { return line.replace( new RegExp(importPath + "(?!.*" + importPath + ")"), url ) }
-    else { console.log('Bundless: Import Error:', line); return line; }
-  }
-
-  let importFileName = importPath.split("/").slice(-1)[0];
-  importPath = importPath.split("/").slice(0, -1).join("/")+"/";
-
-  const isRelativePath = importPath.startsWith(".");
-  if (isRelativePath) {
-    currentFilePath = currentFilePath.replace(/\/$/, "");
-    let newPath = currentFilePath.split("/");
-    // console.log('getPath:', newPath);
-    for (let part of importPath.split("/") ) {
-        if (part === "..") { if (newPath.length > 0) {
-            newPath.pop();
-        } }
-        else if (part !== ".") {
-          newPath.push(part);
-        }
-    }
-
-    // console.log('getPath:', {currentFilePath, importPath, newPath:newPath.join("/")});
-    importPath = newPath.join("/");
-
-  }
-
-  if (!window.Bundless.cache) {
-    importFileName += `?cachebust=${Date.now()}`;
-  }
-
-    const isModuleFile = /\.(mjs|js|ts)(\?|$)/.test(importFileName);
-    if (isModuleFile) {
-    let newLine = transformStaticImportsToDynamic(importPath, importFileName, namedExports, defaultExport);
-    // console.log('handleImportLine: importPath:', {importPath, importFileName, newLine});
-    return newLine;
-  }
-
-};
-
 // Calls convertImports on static imports
 async function handleImports(code, pathTo, filename) {
   if (!code.includes("import")) {return code;}
-  // const commentedOut = line.trim().startsWith("//");
-  // if (commentedOut) { transformedLines.push(line); return; }
-  const importList = [];
-  const transformedLines = code.split("\n").map(async (line) => line.trim().startsWith("import") ? handleImportLine(line, pathTo, filename, importList) : line);
-  let finalCode = (await Promise.all(transformedLines)).join("\n");
-  // console.log('handleImports:', finalCode);
-  return finalCode
+  const importState = {
+    importedLocals: new Set(),
+  };
+
+  return code.replace(
+    STATIC_IMPORT_PATTERN,
+    (statement, indentation, sideEffectQuote, sideEffectSpecifier, importClause, fromQuote, fromSpecifier) => {
+      const specifier = sideEffectSpecifier || fromSpecifier;
+      if (!isTransformableLocalModuleImport(specifier)) {
+        return statement;
+      }
+
+      const moduleUrl = resolveLocalModuleImport(specifier, pathTo);
+      return `${indentation}${transformStaticImportsToDynamic(importClause, moduleUrl, importState)}`;
+    }
+  );
 }
 
 function toPreact(code){
@@ -837,13 +898,13 @@ async function transformJSX(code, filePath) {
 
 async function transpileCode(code, pathTo, filename) {
   // console.log('Transpiler: Transpiling:', filename);
-  const processedCode = await handleImports(code, pathTo, filename);
+  const processedCode = await handleImports(code, pathTo);
   // console.log('Processed code: ', processedCode);
   const transpiledCode = transformJSX(processedCode, pathTo + filename);
   return transpiledCode;
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
+runWhenDocumentReady(async () => {
   let scriptTag = document.querySelector('script[src*="bundless.acorn"], script[src*="bundless.babel"]');
   // console.log('Transpiler: Script Tag:', scriptTag);
   if (!scriptTag) {

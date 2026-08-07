@@ -1,5 +1,5 @@
 // Babel.transform, .availablePlugins, .availablePresets, .registerPlugin, .registerPreset, .packages.[generator,parser,template,traverse,types]
-import { handleImports, handleScriptTag, hasBundlessPrefetchScriptTags, startBundlessPrefetches } from './bundless.utils.js'
+import { handleImports, handleScriptTag, hasBundlessPrefetchScriptTags, runWhenDocumentReady, startBundlessPrefetches } from './bundless.utils.js'
 
 
 
@@ -37,7 +37,7 @@ async function transpileCode(code, pathTo, filename) {
   return transpiledCode;
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
+runWhenDocumentReady(async () => {
   let scriptTag = document.querySelector('script[src*="bundless.babel"]');
   // console.log('Transpiler: Script Tag:', scriptTag);
   if (!scriptTag) {
