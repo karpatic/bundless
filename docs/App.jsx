@@ -38,6 +38,22 @@ function TopNav({ page }) {
               {item.label}
             </a>
           ))}
+          <div className="docs-mobile-docs">
+            {docsSections.map((section) => (
+              <section key={section.title}>
+                <span>{section.title}</span>
+                {section.items.map((item) => (
+                  <a
+                    key={item.id}
+                    href={item.href}
+                    aria-current={page && page.id === item.id ? "page" : undefined}
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </section>
+            ))}
+          </div>
         </nav>
       </details>
     </header>

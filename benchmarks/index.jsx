@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import ReactDOM from "react-dom/client";
+import ReactDOM from "react-dom";
 
 const ROW_TIMEOUT_MS = new URLSearchParams(window.location.search).has("fast-smoke") ? 750 : 7000;
 
@@ -22,7 +22,7 @@ const examples = [
   { name: "B.Meriyah + React", url: "/examples/meriyah.html", size: 80, caption: "Alternate React JSX parser.", jsx: true, ts: false, recommended: true },
   { name: "B.Acorn + React", url: "/examples/acorn.html", size: 75, caption: "Acorn JSX runtime with React.", jsx: true, ts: false },
   { name: "B.Sucrase + React", url: "/examples/sucrase.html", size: 90, caption: "JSX plus TypeScript syntax.", jsx: true, ts: true, recommended: true },
-  { name: "B.Sucrase + Preact", url: "/examples/sucrase_preact.html", size: 50, caption: "Recommended TSX path for Preact.", jsx: true, ts: true, recommended: true, highlight: "recommended" },
+  { name: "B.Sucrase + TSX", url: "/examples/tsx.html", size: 90, caption: "TSX with the Sucrase runtime.", jsx: true, ts: true, recommended: true, highlight: "recommended" },
 ];
 
 function SortLabel({ field, sortField, sortDirection }) {
@@ -201,7 +201,7 @@ function BenchmarksPage() {
     setSortDirection("asc");
   }
 
-  async function handleSourceClick(event, item) {
+  function handleSourceClick(event, item) {
     event.preventDefault();
     setPreview({
       open: true,
@@ -210,22 +210,25 @@ function BenchmarksPage() {
       source: "Loading source...",
     });
 
-    try {
-      const response = await fetch(item.url);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status} ${response.statusText || "error"}`);
-      }
-      const source = await response.text();
-      setPreview((current) => (
-        current.url === item.url ? { ...current, source } : current
-      ));
-    } catch (error) {
-      setPreview((current) => (
-        current.url === item.url
-          ? { ...current, source: `Could not load ${item.url}: ${error.message}` }
-          : current
-      ));
-    }
+    fetch(item.url)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status} ${response.statusText || "error"}`);
+        }
+        return response.text();
+      })
+      .then((source) => {
+        setPreview((current) => (
+          current.url === item.url ? { ...current, source } : current
+        ));
+      })
+      .catch((error) => {
+        setPreview((current) => (
+          current.url === item.url
+            ? { ...current, source: `Could not load ${item.url}: ${error.message}` }
+            : current
+        ));
+      });
   }
 
   function closePreview() {
@@ -237,7 +240,7 @@ function BenchmarksPage() {
   }
 
   return (
-    <React.Fragment>
+    <div className="benchmark-app">
       <header className="docs-topbar benchmark-topbar">
         <a className="docs-brand" href="/" aria-label="Bundless home">
           <span className="docs-brand-mark">B</span>
@@ -371,7 +374,7 @@ function BenchmarksPage() {
           hidden
         ></iframe>
       </main>
-    </React.Fragment>
+    </div>
   );
 }
 
