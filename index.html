@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <title>Bundless - Build more, bundle less</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Run JSX or TSX from a static server, then add a build only when the project needs one.">
+  <meta name="description" content="Run React JSX or TSX from static files. Bundless resolves nested imports in the browser, so component files can import more component files.">
   <link rel="canonical" href="/">
   <link rel="stylesheet" href="/docs.css">
 </head>
@@ -41,8 +41,16 @@
         <p class="docs-kicker">Create React apps with a file server</p>
         <h1>Build more, bundle less.</h1>
         <p>
-          You came here to write code, not spend the afternoon configuring a development
-          environment. Serve the files and get on with it.
+          Bundless resolves nested imports in the browser. Your React app can keep
+          components in separate files, and those components can import more components,
+          with no local bundler.
+        </p>
+        <p>
+          Use it on shared hosting, GitHub Pages, a simple PHP site, or a sandbox
+          or student account that includes static file serving. Some developers start
+          with Preact to avoid React build setup. As an app grows, React and Preact
+          differences can matter. Bundless lets you use React from the start while you
+          still serve plain files.
         </p>
         <p><strong>Bundless.js</strong>: 36Kb Acorn runtime for JSX. Need TypeScript or TSX? Use Sucrase: 52Kb.</p>
         <div class="docs-demo-links">
@@ -68,16 +76,16 @@
 
     <section class="home-points" aria-label="Bundless basics">
       <article>
-        <h2>External JSX</h2>
-        <p>Point a <code>text/jsx</code> script at your file. Bundless transforms it in the browser.</p>
+        <h2>Nested imports</h2>
+        <p>Put <code>App.jsx</code>, <code>Header.jsx</code>, and <code>Button.jsx</code> in separate files. Bundless follows each local import.</p>
       </article>
       <article>
-        <h2>Inline JSX</h2>
-        <p>Small demos can put JSX directly inside a <code>text/jsx</code> script.</p>
+        <h2>Real React</h2>
+        <p>Use React from an import map. Keep the React APIs you know while you avoid local build setup.</p>
       </article>
       <article>
-        <h2>JSX or TSX</h2>
-        <p>Use Acorn for the small JSX default. Use Sucrase when TypeScript enters the room.</p>
+        <h2>Static hosts</h2>
+        <p>Use shared hosting, GitHub Pages, simple PHP sites, or sandbox and student accounts with static file serving.</p>
       </article>
     </section>
 

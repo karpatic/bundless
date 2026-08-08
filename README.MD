@@ -2,7 +2,9 @@
 
 Create React apps with a file server.
 
-You came here to write code, not spend the afternoon configuring a development environment. Serve the files and get on with it.
+Bundless resolves nested imports in the browser. Your React app can keep components in separate files, and those components can import more components, with no local bundler.
+
+Use it on shared hosting, GitHub Pages, a simple PHP site, or a sandbox or student account that includes static file serving. Some developers start with Preact to avoid React build setup. As an app grows, React and Preact differences can matter. Bundless lets you use React from the start while you still serve plain files.
 
 **Bundless.js**: 36Kb Acorn runtime for JSX. Need TypeScript or TSX? Use Sucrase: 52Kb.
 
