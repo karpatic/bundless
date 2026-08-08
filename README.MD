@@ -1,8 +1,8 @@
-# Build more. Bundle less.
+# Build more, bundle less.
 
-React JSX in the browser. No starter temple. No local Node shrine. No "first configure the toolchain" side quest.
+Create React apps with a file server.
 
-Write the component. Refresh the tab. Get on with your life.
+You came here to write code, not spend the afternoon configuring a development environment. Serve the files and get on with it.
 
 **Bundless.js**: 36Kb Acorn runtime for JSX. Need TypeScript or TSX? Use Sucrase: 52Kb.
 
@@ -10,7 +10,7 @@ Write the component. Refresh the tab. Get on with your life.
 
 ## Getting Started
 
-Serve a plain HTML file over HTTP. Browsers do not fetch modules from vibes.
+Serve a plain HTML file over HTTP.
 
 Put this in the page if your JSX imports React by name:
 
@@ -57,7 +57,7 @@ TSX is the same idea, just swap in Sucrase and keep the app script as `text/jsx`
 <script src="./dist/bundless.sucrase.min.js" type="module"></script>
 ```
 
-Acorn is the small default. Sucrase is for JSX plus TypeScript. Babel, Meriyah, prefetching, Webpack migration, cache behavior, and the other sharp bits live in the [Usage Docs](https://bundless.dev/examples/index.html), where that wall of detail belongs.
+Acorn is the small default. Sucrase handles JSX plus TypeScript. Babel, Meriyah, prefetching, Webpack migration, and the rest are in the [Usage Docs](https://bundless.dev/examples/index.html).
 
 ## Memes
 
