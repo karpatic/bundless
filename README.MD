@@ -1,29 +1,16 @@
 # Build more, bundle less.
 
-Create React apps with a file server.
+Run JSX from plain HTML while the idea is still small and the bundler has not found your address yet.
 
-You came here to write code, not spend the afternoon configuring a development environment. Serve the files and get on with it.
+Bundless is for React demos, docs, prototypes, and static pages that should start with a file server instead of a build pipeline. Serve the files, write the component, and move to a bundler only when the project actually raises its hand.
 
 **Bundless.js**: 36Kb Acorn runtime for JSX. Need TypeScript or TSX? Use Sucrase: 52Kb.
 
-[Playground](https://bundless.dev/examples/playground.html) · [Usage Docs](https://bundless.dev/examples/index.html) · [Migration](https://bundless.dev/migration.html) · [Benchmarks](https://bundless.dev/benchmarks/index.html) · [GitHub](https://github.com/karpatic/bundless)
+[Usage Docs](https://bundless.dev/usage.html) · [Playground](https://bundless.dev/playground.html) · [Migration](https://bundless.dev/migration.html) · [Benchmarks](https://bundless.dev/benchmarks.html) · [GitHub](https://github.com/karpatic/bundless)
 
 ## Getting Started
 
-Serve a plain HTML file over HTTP.
-
-Put this in the page if your JSX imports React by name:
-
-```html
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@17.0.2/es2022/react.mjs",
-    "react-dom": "https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs"
-  }
-}
-</script>
-```
+Serve a plain HTML file over HTTP, then add one app script and one Bundless runtime.
 
 External JSX:
 
@@ -37,27 +24,22 @@ Inline JSX:
 
 ```html
 <div id="react-root"></div>
-<script type="text/babel">
-  import React from "react";
-  import ReactDOM from "react-dom";
-
-  function App() {
-    return <h1>Finally, the page exists.</h1>;
-  }
-
-  ReactDOM.render(<App />, document.getElementById("react-root"));
+<script type="text/jsx">
+  ReactDOM.render(<h1>Hello from Bundless.</h1>, document.getElementById("react-root"));
 </script>
 <script src="./dist/bundless.acorn.min.js" type="module"></script>
 ```
 
-TSX is the same idea, just swap in Sucrase and keep the app script as `text/jsx`:
+TSX:
 
 ```html
 <script src="./App.tsx" type="text/jsx"></script>
 <script src="./dist/bundless.sucrase.min.js" type="module"></script>
 ```
 
-Acorn is the small default. Sucrase handles JSX plus TypeScript. Babel, Meriyah, prefetching, and the rest are in the [Usage Docs](https://bundless.dev/examples/index.html). When production constraints call for a build, use the [Webpack migration guide](https://bundless.dev/migration.html).
+The page needs React available too. The [Usage Docs](https://bundless.dev/usage.html) show the tiny import map when your JSX imports packages by name, because opening the homepage with a JSON blob would be rude.
+
+Acorn is the small default. Sucrase handles JSX plus TypeScript. Babel, Meriyah, prefetching, and the rest are in the docs. When production constraints call for a build, use the [Webpack migration guide](https://bundless.dev/migration.html).
 
 ## Memes
 

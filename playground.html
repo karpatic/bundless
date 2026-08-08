@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Bundless Playground</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Type JSX and see Bundless transpile it in the browser.">
+  <link rel="canonical" href="/playground.html">
+  <link rel="stylesheet" href="/docs.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@17.0.2/es2022/react.mjs",
+        "react-dom": "https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs"
+      }
+    }
+  </script>
+  <script src="/dist/bundless.sucrase.min.js" type="module"></script>
+</head>
+<body>
+  <header class="docs-topbar">
+    <a class="docs-brand" href="/" aria-label="Bundless home">
+      <span class="docs-brand-mark">B</span>
+      <span>Bundless</span>
+    </a>
+    <nav class="docs-toplinks" aria-label="Main navigation">
+      <a href="/">Home</a>
+      <a href="/usage.html">Usage Docs</a>
+      <a href="/migration.html">Migration</a>
+      <a href="/playground.html" aria-current="page">Playground</a>
+      <a href="/benchmarks.html">Benchmarks</a>
+      <a href="https://github.com/karpatic/bundless">GitHub</a>
+    </nav>
+    <details class="docs-mobile-menu">
+      <summary>Menu</summary>
+      <nav class="docs-mobile-panel" aria-label="Mobile navigation">
+        <a href="/">Home</a>
+        <a href="/usage.html">Usage Docs</a>
+        <a href="/migration.html">Migration</a>
+        <a href="/playground.html" aria-current="page">Playground</a>
+        <a href="/benchmarks.html">Benchmarks</a>
+        <a href="https://github.com/karpatic/bundless">GitHub</a>
+      </nav>
+    </details>
+  </header>
+
+  <main class="playground-page">
+    <section class="playground-intro">
+      <h1>Bundless Playground</h1>
+      <p>
+        Type React JSX, transpile it in this browser, and run the result in an iframe. This is a
+        quick way to inspect what Bundless sends to the page.
+      </p>
+    </section>
+
+    <section class="playground-workspace" aria-label="Playground workspace">
+      <section class="playground-panel">
+        <div class="playground-panel-header">
+          <h2>Input JSX</h2>
+          <button class="playground-button" id="run-jsx" type="button">Transpile JSX</button>
+        </div>
+        <textarea class="playground-editor" id="jsx-code" spellcheck="false">import React from 'react';
+import ReactDOM from 'react-dom';
+
+const App = () => {
+  return (
+    <h1>Hello, World!</h1>
+  );
+};
+
+ReactDOM.render(<App />, document.getElementById('react-root'));</textarea>
+      </section>
+
+      <section class="playground-panel">
+        <div class="playground-panel-header">
+          <h2>Transpiled Code</h2>
+        </div>
+        <textarea class="playground-editor" id="transpiled-code" spellcheck="false" readonly></textarea>
+      </section>
+
+      <section class="playground-panel playground-output-panel">
+        <div class="playground-panel-header">
+          <h2>Output</h2>
+        </div>
+        <iframe class="playground-output" id="output-frame" title="Playground output"></iframe>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    document.getElementById("run-jsx").addEventListener("click", async () => {
+      const jsxCode = document.getElementById("jsx-code").value;
+      const transpiledCode = await window.Bundless.transpileCode(jsxCode, "/", "playground.jsx");
+      document.getElementById("transpiled-code").value = transpiledCode;
+
+      const html = document.documentElement.cloneNode(true).outerHTML;
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+      doc.body.innerHTML = '<div id="react-root"></div>';
+
+      const script = document.createElement("script");
+      script.type = "module";
+      script.textContent = transpiledCode;
+      doc.body.appendChild(script);
+
+      const iframe = document.getElementById("output-frame");
+      iframe.srcdoc = doc.documentElement.outerHTML;
+    });
+  </script>
+</body>
+</html>

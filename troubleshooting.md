@@ -1,6 +1,6 @@
 # Troubleshooting Bundless
 
-[Home](/index.html) - [Try it out](/examples/playground.html) - [Examples](/examples/index.html) - [Benchmarks](/benchmarks/index.html)
+[Home](/) - [Playground](/playground.html) - [Usage Docs](/usage.html) - [Benchmarks](/benchmarks.html)
 
 ## Preact Mode    
 
