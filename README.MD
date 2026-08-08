@@ -6,7 +6,7 @@ You came here to write code, not spend the afternoon configuring a development e
 
 **Bundless.js**: 36Kb Acorn runtime for JSX. Need TypeScript or TSX? Use Sucrase: 52Kb.
 
-[Playground](https://bundless.dev/examples/playground.html) · [Usage Docs](https://bundless.dev/examples/index.html) · [Benchmarks](https://bundless.dev/benchmarks/index.html) · [GitHub](https://github.com/karpatic/bundless)
+[Playground](https://bundless.dev/examples/playground.html) · [Usage Docs](https://bundless.dev/examples/index.html) · [Migration](https://bundless.dev/migration.html) · [Benchmarks](https://bundless.dev/benchmarks/index.html) · [GitHub](https://github.com/karpatic/bundless)
 
 ## Getting Started
 
@@ -57,7 +57,7 @@ TSX is the same idea, just swap in Sucrase and keep the app script as `text/jsx`
 <script src="./dist/bundless.sucrase.min.js" type="module"></script>
 ```
 
-Acorn is the small default. Sucrase handles JSX plus TypeScript. Babel, Meriyah, prefetching, Webpack migration, and the rest are in the [Usage Docs](https://bundless.dev/examples/index.html).
+Acorn is the small default. Sucrase handles JSX plus TypeScript. Babel, Meriyah, prefetching, and the rest are in the [Usage Docs](https://bundless.dev/examples/index.html). When production constraints call for a build, use the [Webpack migration guide](https://bundless.dev/migration.html).
 
 ## Memes
 
