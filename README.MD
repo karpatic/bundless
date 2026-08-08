@@ -1,82 +1,68 @@
 # Build more. Bundle less.
 
-React JSX and TypeScript can run directly in the browser without a build step.
+React JSX in the browser. No starter temple. No local Node shrine. No "first configure the toolchain" side quest.
 
-Bundless starts with browser-native modules: serve HTML, load JSX or TSX, edit, refresh. When bundling becomes necessary, move the same application imports to Webpack. Bundling is an optimization and deployment decision, not a prerequisite for writing the app.
+Write the component. Refresh the tab. Get on with your life.
 
-[Get Started](#get-started) · [Playground](https://bundless.dev/examples/playground.html) · [GitHub](https://github.com/karpatic/bundless)
+**Bundless.js**: 36Kb Acorn runtime for JSX. Need TypeScript or TSX? Use Sucrase: 52Kb.
 
-## Get Started
+[Playground](https://bundless.dev/examples/playground.html) · [Usage Docs](https://bundless.dev/examples/index.html) · [Benchmarks](https://bundless.dev/benchmarks/index.html) · [GitHub](https://github.com/karpatic/bundless)
 
-Serve this file over HTTP:
+## Getting Started
+
+Serve a plain HTML file over HTTP. Browsers do not fetch modules from vibes.
+
+Put this in the page if your JSX imports React by name:
 
 ```html
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script type="importmap">
-      {
-        "imports": {
-          "react": "https://esm.sh/react@17.0.2/es2022/react.mjs",
-          "react-dom": "https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs"
-        }
-      }
-    </script>
-  </head>
-  <body>
-    <div id="react-root"></div>
-
-    <script type="text/babel">
-      import React from "react";
-      import ReactDOM from "react-dom";
-
-      function App() {
-        return (
-          <main>
-            <h1>Hello from Bundless</h1>
-            <p>React JSX is running without an app bundle.</p>
-          </main>
-        );
-      }
-
-      ReactDOM.render(<App />, document.getElementById("react-root"));
-    </script>
-
-    <script src="/dist/bundless.acorn.min.js" type="module"></script>
-  </body>
-</html>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@17.0.2/es2022/react.mjs",
+    "react-dom": "https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs"
+  }
+}
+</script>
 ```
 
-For a separate file, use the same imports in `App.jsx` and load it with `<script src="./App.jsx" type="text/jsx"></script>`. For TSX, load `bundless.sucrase.min.js` and keep the app script type as `text/jsx`.
-
-## Runtime Choices
-
-<strong><a href="/dist/bundless.acorn.min.js" target="_blank">Acorn</a>: 36Kb | default runtime | no runtime inline source maps</strong>
+External JSX:
 
 ```html
+<div id="react-root"></div>
+<script src="./App.jsx" type="text/jsx"></script>
 <script src="./dist/bundless.acorn.min.js" type="module"></script>
 ```
 
-<strong><a href="/dist/bundless.sucrase.min.js" target="_blank">Sucrase</a>: 52Kb | JSX + TypeScript | source-maps</strong>
+Inline JSX:
 
 ```html
+<div id="react-root"></div>
+<script type="text/babel">
+  import React from "react";
+  import ReactDOM from "react-dom";
+
+  function App() {
+    return <h1>Finally, the page exists.</h1>;
+  }
+
+  ReactDOM.render(<App />, document.getElementById("react-root"));
+</script>
+<script src="./dist/bundless.acorn.min.js" type="module"></script>
+```
+
+TSX is the same idea, just swap in Sucrase and keep the app script as `text/jsx`:
+
+```html
+<script src="./App.tsx" type="text/jsx"></script>
 <script src="./dist/bundless.sucrase.min.js" type="module"></script>
 ```
 
-Use Sucrase when you need JSX and TypeScript syntax. Babel and Meriyah are also available; see the [Usage Docs](https://bundless.dev/examples/index.html) for working pages and the full build matrix.
+Acorn is the small default. Sucrase is for JSX plus TypeScript. Babel, Meriyah, prefetching, Webpack migration, cache behavior, and the other sharp bits live in the [Usage Docs](https://bundless.dev/examples/index.html), where that wall of detail belongs.
 
-## How It Works
+## Memes
 
-1. Browser import maps resolve packages such as React.
-2. Bundless transforms `text/jsx` and `text/babel` scripts in the browser.
-3. Local JSX, JS, TS, and TSX app modules load through `window.import()`.
-
-Default imports use bundler-style interop: if a module owns a `default` export, Bundless uses it; otherwise the default binding falls back to the module namespace. Named imports stay named imports, namespace imports stay namespaces, and side-effect imports load only.
-
-## Move to Webpack
-
-Bundless is an on-ramp, not a trap. Keep ordinary imports plus literal `window.import()` and `window.Bundless.prefetch()` calls, then add [`bundlessdev/webpack`](https://bundless.dev/examples/index.html#move-to-webpack) when runtime compilation, dependency control, CSP, or production performance starts to matter.
-
-See [Usage Docs](https://bundless.dev/examples/index.html) for runtime behavior, prefetching, troubleshooting, runnable examples, and the full Webpack API reference.
+<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+  <img src="memes/meme_what_gives_peope_feelings_of_power.jpg" style="width:300px;" />
+  <img src="memes/meme_did_you_just_take_both_pills.jpeg" style="width:300px;" />
+  <img src="memes/meme_left_exit_12_off_ramp.jpg" style="width:300px;" />
+</div>

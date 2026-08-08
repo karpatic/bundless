@@ -29,71 +29,16 @@
   <body>
     <h1>Bundless Usage Docs</h1>
     <p>
-      Build more. Bundle less. Bundless lets React JSX and TypeScript run directly in the
-      browser without a build step, then keeps a path to Webpack when bundling becomes a better
-      deployment choice.
+      The homepage is the short Getting Started page. This is the longer shelf: runtime behavior,
+      imports, prefetching, examples, migration, API reference, and troubleshooting.
     </p>
 
     <p>
-      <a href="/">Get Started</a> |
+      <a href="/">Getting Started</a> |
       <a href="./playground.html">Playground</a> |
       <a href="https://github.com/karpatic/bundless">GitHub</a> |
       <a href="/benchmarks/index.html">Benchmarks</a>
     </p>
-
-    <h2 id="quick-start">Quick start</h2>
-    <p>Serve this file over HTTP. Bundless transforms the JSX script and appends a module script.</p>
-    <pre><code>&lt;!doctype html&gt;
-&lt;html lang="en"&gt;
-  &lt;head&gt;
-    &lt;meta charset="utf-8"&gt;
-    &lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;
-    &lt;script type="importmap"&gt;
-      {
-        "imports": {
-          "react": "https://esm.sh/react@17.0.2/es2022/react.mjs",
-          "react-dom": "https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs"
-        }
-      }
-    &lt;/script&gt;
-  &lt;/head&gt;
-  &lt;body&gt;
-    &lt;div id="react-root"&gt;&lt;/div&gt;
-
-    &lt;script type="text/babel"&gt;
-      import React from "react";
-      import ReactDOM from "react-dom";
-
-      function App() {
-        return &lt;h1&gt;Hello from Bundless&lt;/h1&gt;;
-      }
-
-      ReactDOM.render(&lt;App /&gt;, document.getElementById("react-root"));
-    &lt;/script&gt;
-
-    &lt;script src="/dist/bundless.acorn.min.js" type="module"&gt;&lt;/script&gt;
-  &lt;/body&gt;
-&lt;/html&gt;</code></pre>
-
-    <h2>React example</h2>
-    <p>Use <code>type="text/jsx"</code> for an external JSX file.</p>
-    <pre><code>&lt;script src="./App.jsx" type="text/jsx"&gt;&lt;/script&gt;
-&lt;script src="/dist/bundless.acorn.min.js" type="module"&gt;&lt;/script&gt;</code></pre>
-    <details class="example" data-url="/examples/acorn.html">
-      <summary>React JSX Source + Output</summary>
-    </details>
-
-    <h2>TypeScript/TSX example</h2>
-    <p>
-      Use Sucrase for TypeScript or TSX, and still mark the app script as
-      <code>type="text/jsx"</code>. The runtime scans <code>text/jsx</code> and
-      <code>text/babel</code>; it does not scan <code>text/tsx</code>.
-    </p>
-    <pre><code>&lt;script src="./tsx-app.tsx" type="text/jsx"&gt;&lt;/script&gt;
-&lt;script src="/dist/bundless.sucrase.min.js" type="module"&gt;&lt;/script&gt;</code></pre>
-    <details class="example" data-url="/examples/tsx.html">
-      <summary>TSX Source + Output</summary>
-    </details>
 
     <h2>Runtime/import behavior</h2>
     <h3>HTML scripts</h3>
@@ -226,6 +171,9 @@ module.openDialog();</code></pre>
 &lt;script src="/dist/bundless.sucrase.min.js" type="module" to="preact"&gt;&lt;/script&gt;</code></pre>
     <h3>More runtime examples</h3>
     <p>Each disclosure fetches the page source and runs the same URL in an iframe.</p>
+    <details class="example" data-url="/examples/acorn.html">
+      <summary>Acorn React Source + Output</summary>
+    </details>
     <details class="example" data-url="/examples/acorn_speed_test.html">
       <summary>Acorn speed test Source + Output</summary>
     </details>
@@ -249,6 +197,9 @@ module.openDialog();</code></pre>
     </details>
     <details class="example" data-url="/examples/sucrase.html">
       <summary>Sucrase React Source + Output</summary>
+    </details>
+    <details class="example" data-url="/examples/tsx.html">
+      <summary>TSX Source + Output</summary>
     </details>
     <details class="example" data-url="/examples/sucrase%20debug.html">
       <summary>Sucrase debug component Source + Output</summary>
