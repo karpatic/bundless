@@ -2,80 +2,96 @@ import React from "react";
 import {
   Callout,
   CodeBlock,
+  codeLines,
   DemoDisclosure,
   DemoLink,
   DemoLinks,
   PageHeader,
 } from "../App.jsx";
 
-const externalTags = `
-<div id="react-root"></div>
-<script src="./App.jsx" type="text/jsx"></script>
-<script src="/dist/bundless.acorn.min.js" type="module"></script>
-`;
+const completePage = codeLines([
+  "<!doctype html>",
+  "<meta charset=\"utf-8\">",
+  "<title>Bundless example</title>",
+  "<script type=\"importmap\">",
+  "{",
+  "  \"imports\": {",
+  "    \"react\": \"https://esm.sh/react@17.0.2/es2022/react.mjs\",",
+  "    \"react-dom\": \"https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs\"",
+  "  }",
+  "}",
+  "</script>",
+  "<div id=\"react-root\"></div>",
+  "<script src=\"./App.jsx\" type=\"text/jsx\"></script>",
+  "<script src=\"/dist/bundless.acorn.min.js\" type=\"module\"></script>",
+]);
 
-const inlineTags = `
-<div id="react-root"></div>
-<script type="text/jsx">
-  import React from "react";
-  import ReactDOM from "react-dom";
+const appFile = codeLines([
+  "import React from \"react\";",
+  "import ReactDOM from \"react-dom\";",
+  "",
+  "ReactDOM.render(",
+  "  <h1>Hello from Bundless.</h1>,",
+  "  document.getElementById(\"react-root\")",
+  ");",
+]);
 
-  ReactDOM.render(
-    <h1>Hello from Bundless.</h1>,
-    document.getElementById("react-root")
-  );
-</script>
-<script src="/dist/bundless.acorn.min.js" type="module"></script>
-`;
-
-const fileServer = `
-npx http-server .
-`;
+const inlineScript = codeLines([
+  "<script type=\"text/jsx\">",
+  "  import React from \"react\";",
+  "  import ReactDOM from \"react-dom\";",
+  "",
+  "  ReactDOM.render(",
+  "    <h1>Hello from Bundless.</h1>,",
+  "    document.getElementById(\"react-root\")",
+  "  );",
+  "</script>",
+]);
 
 export default function GettingStartedPage() {
   return (
     <div className="docs-flow">
-      <PageHeader kicker="Start" title="Run JSX from a plain HTML page">
-        You only need an HTML file, a JSX file, a file server, and one Bundless runtime.
+      <PageHeader kicker="Start" title="Run an external JSX file">
+        Create one HTML file and one JSX file. Then serve the directory over HTTP.
       </PageHeader>
 
-      <h2>Serve the files</h2>
+      <h2>1. Create the HTML file</h2>
       <p>
-        Open the page through HTTP, not by double-clicking the file. Browsers block some module
-        and fetch behavior on <code>file://</code> pages.
+        Save this code as <code>index.html</code>. The import map defines the package names that
+        <code>App.jsx</code> imports.
       </p>
-      <CodeBlock code={fileServer} />
+      <CodeBlock code={completePage} />
 
-      <h2>External JSX</h2>
+      <h2>2. Create the application file</h2>
+      <p>Save this code as <code>App.jsx</code> in the same directory.</p>
+      <CodeBlock code={appFile} />
+
+      <h2>3. Serve the directory</h2>
+      <CodeBlock code={`npx http-server .`} />
       <p>
-        Put app code in <code>App.jsx</code>. Then add these tags to the page.
+        Open the HTTP address from the command output. Do not use a <code>file://</code> URL.
       </p>
-      <CodeBlock code={externalTags} />
 
-      <h2>Inline JSX</h2>
+      <h2>Keep a small example inline</h2>
       <p>
-        Inline code works too. It is useful for small demos and docs examples.
+        For a small demo, replace the external application tag with this inline script. Keep the
+        import map and runtime tag in the page.
       </p>
-      <CodeBlock code={inlineTags} />
+      <CodeBlock code={inlineScript} />
 
-      <Callout title="Package imports need an import map">
+      <Callout title="Use only supported source-script types">
         <p>
-          If the JSX imports packages by names like <code>react</code>, add an import map. The next
-          guide shows the small import map pattern and how local modules load.
+          Bundless scans <code>text/jsx</code> and <code>text/babel</code>. For a TSX file, use
+          <code>type="text/jsx"</code> and select the Sucrase runtime. Do not use
+          <code>type="text/tsx"</code>.
         </p>
       </Callout>
 
-      <h2>TSX note</h2>
-      <p>
-        Use Sucrase for TypeScript or TSX. Keep the app script as <code>type="text/jsx"</code>,
-        and swap the runtime to <code>/dist/bundless.sucrase.min.js</code>.
-      </p>
       <DemoLinks>
-        <DemoLink href="/examples/acorn.html">Open Basic JSX Demo</DemoLink>
+        <DemoLink href="/examples/acorn.html">Open JSX Demo</DemoLink>
         <DemoLink href="/examples/tsx.html" secondary>Open TSX Demo</DemoLink>
       </DemoLinks>
-
-      <DemoDisclosure title="Basic Acorn React Source + Output" url="/examples/acorn.html" />
+      <DemoDisclosure title="Show JSX demo source and output" url="/examples/acorn.html" />
     </div>
   );
 }

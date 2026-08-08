@@ -2,6 +2,7 @@ import React from "react";
 import {
   Callout,
   CodeBlock,
+  codeLines,
   DemoDisclosure,
   DemoLink,
   DemoLinks,
@@ -19,71 +20,76 @@ const importMapSnippet = `
 </script>
 `;
 
-const localImports = `
-import React from "react";
-import Counter from "./Counter.jsx";
-import "./analytics.js";
-
-export default function App() {
-  return <Counter />;
-}
-`;
+const localImports = codeLines([
+  "import React from \"react\";",
+  "import Counter from \"./Counter.jsx\";",
+  "import \"./analytics.js\";",
+  "",
+  "export default function App() {",
+  "  return <Counter />;",
+  "}",
+]);
 
 const dynamicImport = `
-const module = await window.import("./Dialog.jsx");
-module.openDialog();
+const dialog = await window.import("./Dialog.jsx");
+dialog.openDialog();
 `;
 
 export default function ModulesPage() {
   return (
     <div className="docs-flow">
-      <PageHeader kicker="Guide" title="Modules and imports">
-        Bundless keeps browser module rules close to the surface. Import maps handle package names.
-        Local app files can be fetched, transformed, cached, and imported by Bundless.
+      <PageHeader kicker="Guide" title="Load packages and application modules">
+        Use an import map for package names. Use local paths for application source.
       </PageHeader>
 
-      <h2>Use import maps for package names</h2>
+      <h2>Map package names</h2>
       <p>
-        Bare imports such as <code>react</code> and <code>react-dom</code> need an import map in
-        the page. The browser reads the map before module code runs.
+        Bare imports such as <code>react</code> remain native browser imports. Put the import map
+        before the Bundless runtime and before application code runs.
       </p>
       <CodeBlock code={importMapSnippet} />
 
-      <h2>Use local imports for app files</h2>
+      <h2>Import local source</h2>
       <p>
-        Local imports with <code>.js</code>, <code>.jsx</code>, <code>.ts</code>, <code>.tsx</code>,
-        or <code>.mjs</code> are resolved from the current file and loaded through
-        <code>window.import()</code>.
+        Bundless routes local static imports through its loader when the path ends in
+        <code>.mjs</code>, <code>.js</code>, <code>.jsx</code>, <code>.ts</code>, or
+        <code>.tsx</code>. It resolves the path from the file that contains the import.
       </p>
       <CodeBlock code={localImports} />
-
-      <h2>Default and named imports</h2>
       <p>
-        Default imports use the module's own <code>default</code> export when it exists. If the
-        module has no default export, Bundless falls back to the module namespace. Named imports
-        stay strict, namespace imports stay namespaces, and side-effect imports only load the file.
+        A default import uses the module <code>default</code> export. If there is no default export,
+        Bundless uses the module namespace for that binding. Named imports must match named exports.
+        Namespace imports remain namespaces. A side-effect import only loads and runs the module.
       </p>
 
-      <h2>Dynamic app modules</h2>
-      <p>
-        Call <code>window.import(url)</code> when a module should load later. Repeated calls for
-        the same normalized URL share one pending promise and then one resolved module. Failed
-        imports are removed from the cache so a retry can fetch again.
-      </p>
+      <h2>Load a module after startup</h2>
       <CodeBlock code={dynamicImport} />
+      <p>
+        <code>window.import()</code> is the Bundless loader, not native <code>import()</code>. It
+        fetches the source, transforms it, evaluates a temporary <code>blob:</code> module, and
+        resolves to the module namespace.
+      </p>
 
-      <Callout title="Cache keys include query strings">
+      <h2>Understand the cache</h2>
+      <ul>
+        <li>Relative and absolute forms of the same normalized URL share one promise.</li>
+        <li>Concurrent calls share the pending promise and one evaluated module.</li>
+        <li>A failed import is removed so that the next call can fetch and run again.</li>
+        <li>Query strings are part of the key. <code>?v=1</code> and <code>?v=2</code> are different modules.</li>
+      </ul>
+
+      <Callout title="Cross-origin source needs CORS">
         <p>
-          Cache-busting query strings remain part of the module key. <code>./Panel.jsx?v=1</code>
-          and <code>./Panel.jsx?v=2</code> are different module requests.
+          Bundless reads local module source with <code>fetch()</code>. A different origin must send
+          CORS headers that permit the page to read the response.
         </p>
       </Callout>
 
       <DemoLinks>
-        <DemoLink href="/examples/acorn.html">Open Module Demo</DemoLink>
-        <DemoLink href="/examples/prefetch.html" secondary>Open Dynamic Import Demo</DemoLink>
+        <DemoLink href="/examples/acorn.html">Open module demo</DemoLink>
+        <DemoLink href="/examples/prefetch.html" secondary>Open dynamic-import demo</DemoLink>
       </DemoLinks>
-      <DemoDisclosure title="Acorn React Source + Output" url="/examples/acorn.html" />
+      <DemoDisclosure title="Show module demo source and output" url="/examples/acorn.html" />
     </div>
   );
 }

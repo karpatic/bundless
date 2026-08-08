@@ -1,6 +1,8 @@
 import React from "react";
 import {
+  Callout,
   CodeBlock,
+  codeLines,
   DemoDisclosure,
   DemoLink,
   DemoLinks,
@@ -13,47 +15,60 @@ const tsxTags = `
 <script src="/dist/bundless.sucrase.min.js" type="module"></script>
 `;
 
-const tsxCode = `
-type GreetingProps = {
-  name: string;
-};
-
-function Greeting({ name }: GreetingProps) {
-  return <h1>Hello, {name}.</h1>;
-}
-`;
+const tsxCode = codeLines([
+  "import React from \"react\";",
+  "import ReactDOM from \"react-dom\";",
+  "",
+  "type GreetingProps = {",
+  "  name: string;",
+  "};",
+  "",
+  "function Greeting({ name }: GreetingProps) {",
+  "  return <h1>Hello, {name}.</h1>;",
+  "}",
+  "",
+  "ReactDOM.render(",
+  "  <Greeting name=\"Bundless\" />,",
+  "  document.getElementById(\"react-root\")",
+  ");",
+]);
 
 export default function TypeScriptPage() {
   return (
     <div className="docs-flow">
-      <PageHeader kicker="Guide" title="TypeScript and TSX">
-        Use Sucrase when you want JSX plus TypeScript syntax in the browser.
+      <PageHeader kicker="Guide" title="Run TypeScript and TSX with Sucrase">
+        Select the Sucrase runtime when application source contains TypeScript syntax.
       </PageHeader>
 
-      <h2>Swap the runtime</h2>
+      <h2>1. Select Sucrase</h2>
       <p>
-        Keep the app script as <code>type="text/jsx"</code>. The Sucrase runtime understands
-        <code>.ts</code> and <code>.tsx</code> files.
+        Keep the source-script type as <code>text/jsx</code>. Bundless does not scan
+        <code>text/tsx</code>. The Sucrase runtime reads <code>.ts</code> and <code>.tsx</code> files.
       </p>
       <CodeBlock code={tsxTags} />
 
-      <h2>Write normal TSX</h2>
-      <p>
-        Types are removed in the browser. They are useful for editing and checking, but they do not
-        exist at runtime.
-      </p>
+      <h2>2. Write the TSX file</h2>
+      <p>Save this code as <code>App.tsx</code>. Keep the React import map in the HTML page.</p>
       <CodeBlock code={tsxCode} />
 
-      <h2>When to move to a build</h2>
+      <Callout title="Sucrase does not type-check">
+        <p>
+          Sucrase removes TypeScript syntax and transforms JSX in the browser. Use a separate type
+          checker if you need type errors before the page runs. Types do not exist at runtime.
+        </p>
+      </Callout>
+
+      <h2>Move type checks into a build when needed</h2>
       <p>
-        Bundless can run TSX for demos, docs, and small apps. Move to Webpack when you need a full
-        type-checking step, production chunks, stricter CSP rules, or more control over dependencies.
+        Add a build when you need required type checks, production chunks, strict CSP, or controlled
+        dependency output. Keep the application source and configure a Webpack TypeScript or JSX
+        loader separately from the Bundless loader.
       </p>
       <DemoLinks>
-        <DemoLink href="/examples/tsx.html">Open TSX Demo</DemoLink>
-        <DemoLink href="/migration.html" secondary>Read Migration Guide</DemoLink>
+        <DemoLink href="/examples/tsx.html">Open TSX demo</DemoLink>
+        <DemoLink href="/migration.html" secondary>Move to Webpack</DemoLink>
       </DemoLinks>
-      <DemoDisclosure title="TSX Source + Output" url="/examples/tsx.html" />
+      <DemoDisclosure title="Show TSX demo source and output" url="/examples/tsx.html" />
     </div>
   );
 }

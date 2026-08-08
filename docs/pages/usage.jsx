@@ -2,6 +2,8 @@ import React from "react";
 import {
   Callout,
   CardGrid,
+  CodeBlock,
+  codeLines,
   DemoLink,
   DemoLinks,
   LinkCard,
@@ -9,65 +11,98 @@ import {
   RuntimeTable,
 } from "../App.jsx";
 
+const firstPage = codeLines([
+  "<!doctype html>",
+  "<meta charset=\"utf-8\">",
+  "<title>Bundless example</title>",
+  "<script type=\"importmap\">",
+  "{",
+  "  \"imports\": {",
+  "    \"react\": \"https://esm.sh/react@17.0.2/es2022/react.mjs\",",
+  "    \"react-dom\": \"https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs\"",
+  "  }",
+  "}",
+  "</script>",
+  "<div id=\"react-root\"></div>",
+  "<script type=\"text/jsx\">",
+  "  import React from \"react\";",
+  "  import ReactDOM from \"react-dom\";",
+  "  ReactDOM.render(",
+  "    <h1>Hello from Bundless.</h1>,",
+  "    document.getElementById(\"react-root\")",
+  "  );",
+  "</script>",
+  "<script src=\"/dist/bundless.acorn.min.js\" type=\"module\"></script>",
+]);
+
 export default function UsagePage() {
   return (
     <div className="docs-flow">
-      <PageHeader kicker="Usage Docs" title="Write JSX first. Add a build later.">
-        Bundless lets an HTML page load React and JSX without setting up a bundler first.
-        Start with files on a small web server, then move to Webpack when the project needs a build step.
+      <PageHeader kicker="Usage" title="Run source now. Add a build later.">
+        Bundless runs JSX or TSX from a static server. It transforms source in the browser and does not make an application bundle.
       </PageHeader>
 
+      <h2>Run the first page</h2>
+      <p>
+        Save this file as <code>index.html</code>. Serve the directory over HTTP. The example uses
+        Acorn, which is the recommended JSX runtime.
+      </p>
+      <CodeBlock code={firstPage} />
+      <CodeBlock code={`npx http-server .`} />
+      <p>
+        The runtime scans <code>script[type="text/jsx"]</code> and
+        <code>script[type="text/babel"]</code>. Package imports need an import map.
+      </p>
+
+      <h2>Choose the next task</h2>
       <CardGrid>
-        <LinkCard href="/docs/getting-started.html" title="Getting Started">
-          Add one JSX script and one Bundless runtime script.
+        <LinkCard href="/docs/getting-started.html" title="Use an external JSX file">
+          Move application code from the HTML file to <code>App.jsx</code>.
         </LinkCard>
-        <LinkCard href="/docs/guides/modules.html" title="Modules and Imports">
-          Use import maps for packages and local imports for your own files.
+        <LinkCard href="/docs/guides/modules.html" title="Load modules">
+          Use import maps, local imports, and <code>window.import()</code>.
         </LinkCard>
-        <LinkCard href="/docs/guides/typescript.html" title="TypeScript and TSX">
-          Switch to Sucrase when a page needs TypeScript syntax.
+        <LinkCard href="/docs/guides/typescript.html" title="Use TypeScript or TSX">
+          Select Sucrase and keep a supported script type.
         </LinkCard>
-        <LinkCard href="/docs/features/prefetch.html" title="Prefetch">
-          Warm likely modules before a later <code>window.import()</code>.
+        <LinkCard href="/docs/features/prefetch.html" title="Prefetch modules">
+          Fetch likely source before a later import.
         </LinkCard>
-        <LinkCard href="/docs/reference/runtimes.html" title="Runtime Choices">
-          Compare Acorn, Meriyah, Babel, and Sucrase.
+        <LinkCard href="/docs/troubleshooting.html" title="Fix a problem">
+          Check HTTP, script types, imports, CSP, and CORS.
         </LinkCard>
-        <LinkCard href="/docs/troubleshooting.html" title="Troubleshooting">
-          Fix common browser, CSP, source-map, and Preact issues.
+        <LinkCard href="/migration.html" title="Add Webpack">
+          Keep supported source calls and move compilation into a build.
         </LinkCard>
       </CardGrid>
 
-      <Callout title="Small defaults">
+      <h2>Choose a runtime</h2>
+      <RuntimeTable />
+
+      <h2>Understand the browser work</h2>
+      <ul>
+        <li>Bare package imports remain native browser imports and use the page import map.</li>
+        <li>Local static imports for supported source extensions use the Bundless module loader.</li>
+        <li><code>window.import()</code> fetches, transforms, evaluates, and caches a module namespace.</li>
+        <li><code>window.Bundless.prefetch()</code> fetches source but does not transform or evaluate it.</li>
+        <li>Declarative prefetch JSON fetches and transforms source but does not evaluate it.</li>
+      </ul>
+
+      <Callout title="Use a build when browser compilation is not suitable">
         <p>
-          Acorn is the small JSX default at 36Kb. Sucrase handles JSX plus TypeScript and TSX at 52Kb.
+          Move to a build for strict CSP, type checking, optimized assets, production chunks, or
+          controlled dependency output. There is no universal project-size limit. Measure startup
+          work on the target devices and network.
         </p>
       </Callout>
 
-      <h2>Pick a path</h2>
-      <p>
-        Use Bundless for prototypes, small internal tools, docs, demos, and static pages where a
-        file server is enough. Use Webpack later when you need production chunking, tighter policy
-        control, or a normal build pipeline.
-      </p>
+      <h2>Open a runnable example</h2>
       <DemoLinks>
         <DemoLink href="/playground.html">Open Playground</DemoLink>
-        <DemoLink href="/examples/acorn.html" secondary>Open Acorn Demo</DemoLink>
-        <DemoLink href="/migration.html" secondary>Read Migration Guide</DemoLink>
-      </DemoLinks>
-
-      <h2>Runtime overview</h2>
-      <RuntimeTable />
-
-      <h2>Runnable examples</h2>
-      <p>
-        The demos stay under <code>/examples/</code> and <code>/benchmarks/</code>. Docs link to
-        those same pages instead of keeping duplicate copies.
-      </p>
-      <DemoLinks>
-        <DemoLink href="/examples/prefetch.html">Prefetch Demo</DemoLink>
-        <DemoLink href="/examples/tsx.html" secondary>TSX Demo</DemoLink>
-        <DemoLink href="/benchmarks.html" secondary>Benchmarks</DemoLink>
+        <DemoLink href="/examples/acorn.html" secondary>Open JSX Demo</DemoLink>
+        <DemoLink href="/examples/tsx.html" secondary>Open TSX Demo</DemoLink>
+        <DemoLink href="/examples/prefetch.html" secondary>Open Prefetch Demo</DemoLink>
+        <DemoLink href="/benchmarks.html" secondary>Open Benchmarks</DemoLink>
       </DemoLinks>
     </div>
   );

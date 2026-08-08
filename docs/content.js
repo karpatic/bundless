@@ -1,9 +1,9 @@
 export const topNavItems = [
   { label: "Home", href: "/" },
-  { label: "Usage Docs", href: "/usage.html" },
-  { label: "Migration", href: "/migration.html" },
+  { label: "Usage", href: "/usage.html" },
   { label: "Playground", href: "/playground.html" },
   { label: "Benchmarks", href: "/benchmarks.html" },
+  { label: "Migration", href: "/migration.html" },
   { label: "GitHub", href: "https://github.com/karpatic/bundless" },
 ];
 
@@ -11,34 +11,29 @@ export const docsSections = [
   {
     title: "Start",
     items: [
-      { id: "usage", label: "Usage Docs", href: "/usage.html" },
-      { id: "getting-started", label: "Getting Started", href: "/docs/getting-started.html" },
+      { id: "usage", label: "Usage", href: "/usage.html" },
+      { id: "getting-started", label: "Run the first page", href: "/docs/getting-started.html" },
     ],
   },
   {
-    title: "Guides",
+    title: "Use Bundless",
     items: [
-      { id: "modules", label: "Modules and Imports", href: "/docs/guides/modules.html" },
-      { id: "typescript", label: "TypeScript and TSX", href: "/docs/guides/typescript.html" },
-    ],
-  },
-  {
-    title: "Features",
-    items: [
-      { id: "prefetch", label: "Prefetch", href: "/docs/features/prefetch.html" },
+      { id: "modules", label: "Load modules", href: "/docs/guides/modules.html" },
+      { id: "typescript", label: "Use TypeScript and TSX", href: "/docs/guides/typescript.html" },
+      { id: "prefetch", label: "Prefetch modules", href: "/docs/features/prefetch.html" },
     ],
   },
   {
     title: "Reference",
     items: [
-      { id: "runtimes", label: "Runtime Choices", href: "/docs/reference/runtimes.html" },
+      { id: "runtimes", label: "Choose a runtime", href: "/docs/reference/runtimes.html" },
       { id: "troubleshooting", label: "Troubleshooting", href: "/docs/troubleshooting.html" },
     ],
   },
   {
-    title: "Move Later",
+    title: "Build later",
     items: [
-      { id: "migration", label: "Webpack Migration", href: "/migration.html" },
+      { id: "migration", label: "Move to Webpack", href: "/migration.html" },
     ],
   },
 ];

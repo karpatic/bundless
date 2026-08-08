@@ -89,7 +89,7 @@ export function DocsShell({ page, children }) {
               </nav>
             ) : null}
             <p className="docs-footer-note">
-              Bundless docs are rendered by Bundless. Each page loads shared JSX modules in the browser.
+              Bundless renders these docs from shared JSX modules in the browser.
             </p>
           </article>
         </main>
@@ -114,6 +114,10 @@ export function CodeBlock({ code }) {
       <code>{code.trim()}</code>
     </pre>
   );
+}
+
+export function codeLines(lines) {
+  return lines.join("\n");
 }
 
 export function Callout({ title, children }) {
@@ -219,30 +223,30 @@ export function RuntimeTable() {
         <thead>
           <tr>
             <th>Runtime</th>
-            <th>Use it when</th>
-            <th>Notes</th>
+            <th>Pick it when</th>
+            <th>Builds</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td><code>Acorn</code></td>
-            <td>You want the small default for JSX pages.</td>
-            <td>Acorn 36Kb. The default and production builds omit runtime inline source maps. The <code>.dev.js</code> build includes runtime inline source maps for JSX debugging.</td>
+            <td>You need the recommended JSX default.</td>
+            <td><code>bundless.acorn.min.js</code>, <code>.prod.js</code>, and <code>.dev.js</code>.</td>
           </tr>
           <tr>
             <td><code>Meriyah</code></td>
-            <td>You want the alternate JSX parser.</td>
-            <td>The default and production builds omit runtime inline source maps. The <code>.dev.js</code> build includes runtime inline source maps for JSX debugging.</td>
+            <td>You need the alternate JSX parser.</td>
+            <td><code>bundless.meriyah.min.js</code>, <code>.prod.js</code>, and <code>.dev.js</code>.</td>
           </tr>
           <tr>
             <td><code>Babel</code></td>
-            <td>You need Babel standalone syntax coverage in the browser.</td>
-            <td>The Babel runtime loads Babel standalone when needed and uses Babel's inline source-map behavior.</td>
+            <td>You need Babel Standalone syntax support.</td>
+            <td><code>bundless.babel.min.js</code>. It loads Babel Standalone if necessary.</td>
           </tr>
           <tr>
             <td><code>Sucrase</code></td>
-            <td>You need JSX plus TypeScript or TSX.</td>
-            <td>Sucrase 52Kb. It has one browser runtime and uses Sucrase inline source-map behavior.</td>
+            <td>You need JSX, TypeScript, or TSX.</td>
+            <td><code>bundless.sucrase.min.js</code>.</td>
           </tr>
         </tbody>
       </table>
@@ -253,8 +257,8 @@ export function RuntimeTable() {
 export function LoadingPage() {
   return (
     <div className="docs-flow">
-      <PageHeader kicker="Loading" title="Preparing this page">
-        Bundless is loading the shared docs module and the page content.
+      <PageHeader kicker="Loading" title="Loading the page">
+        Bundless is loading the shared documentation and page modules.
       </PageHeader>
     </div>
   );
@@ -263,10 +267,10 @@ export function LoadingPage() {
 export function ErrorPage({ message }) {
   return (
     <div className="docs-flow">
-      <PageHeader kicker="Error" title="This docs page did not load">
+      <PageHeader kicker="Error" title="The page did not load">
         {message}
       </PageHeader>
-      <p>Reload the page after checking that the file server is running from the project root.</p>
+      <p>Check that the file server runs from the project root. Then reload the page.</p>
     </div>
   );
 }
