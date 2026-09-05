@@ -465,6 +465,14 @@ blockquote {
   margin-top: 3rem;
 }
 
+.docs-noscript {
+  background: #fff4d6;
+  border-bottom: 1px solid #ead391;
+  display: block;
+  padding: 0.8rem 1rem;
+  text-align: center;
+}
+
 .home-page {
   margin: 0 auto;
   max-width: 1180px;
@@ -497,6 +505,12 @@ blockquote {
   line-height: 1.7;
   margin: 1.1rem 0 0;
   max-width: 650px;
+}
+
+.home-copy .home-size-note {
+  color: var(--docs-muted);
+  font-size: 0.93rem;
+  line-height: 1.55;
 }
 
 .home-demo-card {
@@ -679,7 +693,8 @@ blockquote {
 .playground-workspace {
   display: grid;
   gap: 1rem;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  grid-template-rows: auto auto;
 }
 
 .playground-panel {
@@ -699,6 +714,10 @@ blockquote {
   padding: 0.8rem 1rem;
 }
 
+.playground-panel-header > div:first-child {
+  min-width: 0;
+}
+
 .playground-panel h2 {
   font-size: 0.92rem;
   letter-spacing: 0;
@@ -714,10 +733,64 @@ blockquote {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 0.9rem;
   line-height: 1.5;
-  min-height: 22rem;
+  min-height: 31rem;
   padding: 1rem;
   resize: vertical;
   width: 100%;
+}
+
+.playground-file-path {
+  color: var(--docs-muted);
+  display: block;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.78rem;
+  margin-top: 0.12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playground-controls {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.5rem;
+}
+
+.playground-button.secondary {
+  background: white;
+  border-color: var(--docs-border-strong);
+  color: var(--docs-text);
+}
+
+.playground-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.playground-file-tabs {
+  background: #18231f;
+  border-bottom: 1px solid #294137;
+  display: flex;
+  gap: 0.2rem;
+  overflow-x: auto;
+  padding: 0.45rem 0.5rem 0;
+}
+
+.playground-file-tabs button {
+  background: transparent;
+  border: 0;
+  border-radius: 6px 6px 0 0;
+  color: #b8c9c1;
+  cursor: pointer;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.78rem;
+  padding: 0.55rem 0.7rem;
+  white-space: nowrap;
+}
+
+.playground-file-tabs button[aria-selected="true"] {
+  background: var(--docs-code-bg);
+  color: white;
 }
 
 .playground-button {
@@ -736,16 +809,59 @@ blockquote {
   border-color: var(--docs-accent-strong);
 }
 
-.playground-output-panel {
-  grid-column: 1 / -1;
+.playground-source-panel {
+  grid-row: 1 / span 2;
+}
+
+.playground-preview-panel {
+  align-self: start;
+}
+
+.playground-transpiled-panel {
+  align-self: start;
 }
 
 .playground-output {
   background: white;
   border: 0;
   display: block;
-  height: 22rem;
+  height: 19rem;
   width: 100%;
+}
+
+.playground-status {
+  border-top: 1px solid var(--docs-border);
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.75rem 1rem;
+}
+
+.playground-status strong {
+  font-size: 0.86rem;
+}
+
+.playground-status span {
+  color: var(--docs-muted);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.playground-status[data-status="success"] {
+  background: var(--docs-accent-soft);
+}
+
+.playground-status[data-status="error"] {
+  background: #fff0ed;
+  border-top-color: #f0c4ba;
+}
+
+.playground-status[data-status="error"] strong {
+  color: #963923;
+}
+
+.playground-transpiled {
+  min-height: 15rem;
+  resize: vertical;
 }
 
 .benchmark-page {
@@ -811,6 +927,51 @@ blockquote {
   margin-bottom: 1.2rem;
 }
 
+.benchmark-methodology {
+  align-items: flex-start;
+  background: var(--docs-surface);
+  border: 1px solid var(--docs-border);
+  border-radius: var(--docs-radius);
+  padding: 1rem;
+}
+
+.benchmark-methodology h2 {
+  font-size: 1rem;
+  margin: 0 0 0.35rem;
+}
+
+.benchmark-methodology p + p {
+  margin-top: 0.6rem;
+}
+
+.benchmark-methodology .docs-demo-links {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.benchmark-methodology .docs-button-link {
+  cursor: pointer;
+  font: inherit;
+}
+
+.benchmark-group {
+  margin-top: 2rem;
+}
+
+.benchmark-group > header {
+  margin-bottom: 0.75rem;
+}
+
+.benchmark-group > header h2 {
+  font-size: 1.25rem;
+  margin: 0 0 0.2rem;
+}
+
+.benchmark-group > header p {
+  color: var(--docs-muted);
+  margin: 0;
+}
+
 .benchmark-note p {
   color: #34433e;
   margin: 0;
@@ -830,9 +991,6 @@ blockquote {
 
 .benchmark-table th {
   background: var(--docs-surface);
-  position: sticky;
-  top: var(--docs-top);
-  z-index: 1;
 }
 
 .benchmark-table th button {
@@ -855,6 +1013,14 @@ blockquote {
   background: #fbfcfb;
 }
 
+.benchmark-table tr[data-status="partial"] td {
+  background: #fff9e8;
+}
+
+.benchmark-table tr[data-status="error"] td {
+  background: #fff3f0;
+}
+
 .benchmark-row-muted td {
   background: #f8faf9;
 }
@@ -870,6 +1036,14 @@ blockquote {
   font-size: 0.88rem;
   line-height: 1.45;
   margin-top: 0.2rem;
+}
+
+.benchmark-error-text {
+  color: #963923;
+  display: block;
+  font-size: 0.86rem;
+  max-width: 19rem;
+  overflow-wrap: anywhere;
 }
 
 .benchmark-pill {
@@ -989,6 +1163,10 @@ blockquote {
   padding: 1rem;
   position: fixed;
   z-index: 80;
+}
+
+.benchmark-modal[hidden] {
+  display: none;
 }
 
 .benchmark-modal-panel {
@@ -1136,6 +1314,11 @@ blockquote {
 
   .playground-workspace {
     grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  .playground-source-panel {
+    grid-row: auto;
   }
 
   .home-hero,

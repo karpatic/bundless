@@ -1,32 +1,28 @@
 <!doctype html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Babel React Demo</title> 
-</head> 
+  <title>React and Babel counter benchmark</title>
+  <script src="./ready.js"></script>
+  <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
 <body>
-<div id="react-root"></div>  
+  <div id="benchmark-app"></div>
+  <script type="text/babel">
+    function Counter() {
+      const [count, setCount] = React.useState(0);
+      React.useEffect(() => benchmarkReady("#benchmark-app", "counter"), []);
+      return (
+        <main>
+          <h1>Counter</h1>
+          <button data-counter type="button" onClick={() => setCount(count + 1)}>Count: {count}</button>
+        </main>
+      );
+    }
 
-<!-- Load React -->
-<script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
-
-<!-- Load Babel -->
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-<!-- React component with JSX -->
-<script type="text/babel">
-  function Counter() {
-    const [count, setCount] = React.useState(0);
-    return (
-      <div>
-        <button onClick={() => setCount(count - 1)}>-</button>
-        <span>Count: {count}</span>
-        <button onClick={() => setCount(count + 1)}>+</button>
-      </div>
-    );
-  }
-
-  ReactDOM.render(<Counter />, document.getElementById('react-root'));
-</script>
+    ReactDOM.render(<Counter />, document.getElementById("benchmark-app"));
+  </script>
 </body>
 </html>

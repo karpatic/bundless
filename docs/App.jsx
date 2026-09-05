@@ -105,7 +105,8 @@ export function DocsShell({ page, children }) {
               </nav>
             ) : null}
             <p className="docs-footer-note">
-              Bundless renders these docs from shared JSX modules in the browser.
+              Bundless renders these docs from shared JSX modules in the browser. {" "}
+              <a href="/DOCS.md">Plain Markdown fallback.</a>
             </p>
           </article>
         </main>

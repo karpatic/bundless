@@ -1,0 +1,117 @@
+# Bundless documentation (plain Markdown)
+
+This file is the no-runtime fallback for the browser-rendered documentation on
+[bundless.dev](https://bundless.dev/usage.html).
+
+## Fresh-folder starter
+
+```sh
+mkdir bundless-starter && cd bundless-starter
+npm init -y
+npm install --save-exact bundlessdev@1.0.12
+mkdir -p vendor components
+cp node_modules/bundlessdev/dist/bundless.acorn.min.js vendor/bundless.acorn.min.js
+```
+
+Create `index.html`:
+
+```html
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@17.0.2/es2022/react.mjs",
+    "react-dom": "https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs"
+  }
+}
+</script>
+<div id="react-root"></div>
+<script src="./App.jsx" type="text/jsx"></script>
+<script src="./vendor/bundless.acorn.min.js" type="module"></script>
+```
+
+Create `App.jsx`:
+
+```jsx
+import React from "react";
+import ReactDOM from "react-dom";
+import Header from "./components/Header.jsx";
+
+function App() {
+  return <Header />;
+}
+
+ReactDOM.render(<App />, document.getElementById("react-root"));
+```
+
+Create `components/Header.jsx`:
+
+```jsx
+import React from "react";
+import Button from "./Button.jsx";
+
+export default function Header() {
+  return (
+    <header>
+      <h1>Hello from three files.</h1>
+      <Button>It works</Button>
+    </header>
+  );
+}
+```
+
+Create `components/Button.jsx`:
+
+```jsx
+import React from "react";
+
+export default function Button({ children }) {
+  return <button type="button">{children}</button>;
+}
+```
+
+Run `npx http-server . -c-1` and open the printed HTTP URL. Do not use a
+`file://` URL. All application paths are relative, so the folder also works
+under a hosted subdirectory.
+
+If a CDN dependency is acceptable, the local runtime tag can be replaced with:
+
+```html
+<script src="https://unpkg.com/bundlessdev@1.0.12/dist/bundless.acorn.min.js" type="module"></script>
+```
+
+## Runtime choice
+
+- Acorn is the recommended JSX default. `bundless.acorn.dev.js` includes inline
+  runtime source maps. `bundless.acorn.min.js` and the explicit `.prod.js` build
+  omit those maps.
+- Meriyah is the alternate JSX parser and follows the same dev-versus-production
+  source-map distinction.
+- Sucrase handles JSX, TypeScript, and TSX. It removes TypeScript syntax but does
+  not type-check it; run `tsc --noEmit` separately when checks are required.
+- Babel uses Babel Standalone and has its own source-map behavior.
+
+The checked-in Brotli runtime files are about 36.9 KiB for Acorn and 52.5 KiB
+for Sucrase. Those values are measured binary KiB for the runtime file only;
+React and application code are outside that scope.
+
+## Modules and cache
+
+Bare package imports use the page import map. Relative and absolute local imports
+ending in `.mjs`, `.js`, `.jsx`, `.ts`, or `.tsx` use the Bundless loader.
+
+`window.import()` caches by normalized original module URL. Concurrent and repeated
+imports share one pending promise and one resolved module. A failed import is evicted
+so a retry refetches. Query strings remain part of the cache key.
+
+## More guides
+
+- [Browser usage](https://bundless.dev/usage.html)
+- [Multi-file starter](https://bundless.dev/docs/getting-started.html)
+- [Module loading](https://bundless.dev/docs/guides/modules.html)
+- [TypeScript and TSX](https://bundless.dev/docs/guides/typescript.html)
+- [Runtime reference](https://bundless.dev/docs/reference/runtimes.html)
+- [Webpack migration](https://bundless.dev/migration.html)
+- [Troubleshooting](https://bundless.dev/docs/troubleshooting.html)

@@ -2,10 +2,12 @@
 <html>
 <head>
     <title>Hello World</title>
+    <script src="./ready.js"></script>
 </head>
 <body>
     <script type="module">
-      document.body.innerHTML = '<h1>Hello, world!</h1>'
+      document.body.innerHTML += '<h1 id="benchmark-greeting">Hello, world!</h1>';
+      benchmarkReady("#benchmark-greeting", "greeting");
     </script>
 </body>
 </html>

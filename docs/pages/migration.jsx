@@ -8,7 +8,10 @@ import {
 } from "../App.jsx";
 
 const installCommand = `
-npm install --save-dev bundlessdev webpack webpack-cli html-webpack-plugin babel-loader @babel/core @babel/preset-react
+npm install react@18.3.1 react-dom@18.3.1
+npm install --save-dev bundlessdev@1.0.12 webpack webpack-cli html-webpack-plugin http-server babel-loader @babel/core @babel/preset-env @babel/preset-react
+npm pkg set scripts.build="webpack --config webpack.config.cjs --mode production"
+npm pkg set scripts.serve="http-server dist -c-1"
 `;
 
 const webpackConfig = `
@@ -17,15 +20,26 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const BundlessWebpackPlugin = require("bundlessdev/webpack");
 
 module.exports = {
+  mode: "production",
   entry: "./src/index.jsx",
+  output: {
+    path: path.resolve(__dirname, "dist"),
+    filename: "app.[contenthash].js",
+    clean: true,
+  },
   module: {
     rules: [
       {
-        test: /\\.[jt]sx?$/,
+        test: /\\.jsx?$/,
         exclude: /node_modules/,
         use: {
           loader: "babel-loader",
-          options: { presets: ["@babel/preset-react"] },
+          options: {
+            presets: [
+              ["@babel/preset-env", { targets: "defaults" }],
+              ["@babel/preset-react", { runtime: "automatic" }],
+            ],
+          },
         },
       },
     ],
@@ -39,6 +53,43 @@ module.exports = {
     }),
   ],
 };
+`;
+
+const htmlTemplate = `
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Built React app</title>
+</head>
+<body>
+  <div id="root"></div>
+</body>
+</html>
+`;
+
+const entryFile = `
+import { createRoot } from "react-dom/client";
+import App from "./App.jsx";
+
+createRoot(document.getElementById("root")).render(<App />);
+`;
+
+const appFile = `
+export default function App() {
+  return <h1>The Webpack build works.</h1>;
+}
+`;
+
+const buildCommands = `
+npm run build
+npm run serve
+`;
+
+const typeCheckCommands = `
+npm install --save-dev typescript @types/react @types/react-dom
+npx tsc --noEmit
 `;
 
 const wrapperExample = `
@@ -95,24 +146,61 @@ export default function MigrationPage() {
       <h2>1. Install the build tools</h2>
       <CodeBlock code={installCommand} />
       <p>
-        This example uses Babel for JSX. Use the normal SWC, esbuild, or TypeScript loader instead if
-        that is the compiler for the project.
+        React and ReactDOM become application dependencies instead of CDN imports. This example uses
+        Babel for JSX and pins the Bundless integration used by the migration.
       </p>
 
-      <h2>2. Create the Webpack configuration</h2>
+      <h2>2. Create{" "}<code>webpack.config.cjs</code></h2>
       <CodeBlock code={webpackConfig} />
       <p>
         The Bundless plugin adds its loader as a pre-loader. That loader rewrites supported calls.
         It does not transpile JSX or TypeScript. The separate Babel rule does the syntax transform.
       </p>
 
-      <h2>3. Move application startup into the entry</h2>
-      <ol>
-        <li>Move code from <code>text/jsx</code> or <code>text/babel</code> tags into <code>./src/index.jsx</code> and imported files.</li>
-        <li>Keep package and local imports in the source files. Webpack now resolves them.</li>
-        <li>Let HtmlWebpackPlugin add the output bundle to generated HTML.</li>
-        <li>Build and verify the rendered application before you remove the old browser path.</li>
-      </ol>
+      <h2>3. Create the template and application entry</h2>
+      <h3><code>index.html</code></h3>
+      <CodeBlock code={htmlTemplate} />
+      <h3><code>src/index.jsx</code></h3>
+      <CodeBlock code={entryFile} />
+      <h3><code>src/App.jsx</code></h3>
+      <CodeBlock code={appFile} />
+      <p>
+        Move the rest of the source out of <code>text/jsx</code> or <code>text/babel</code> tags and
+        keep its package and local imports. Webpack now resolves them.
+      </p>
+
+      <h2>4. Remove the browser-only path</h2>
+      <p>Delete these items from the HTML template after the built entry renders correctly:</p>
+      <ul>
+        <li>React and ReactDOM CDN script tags.</li>
+        <li>The React import map, including <code>react-dom/client</code> mappings.</li>
+        <li>Bundless runtime tags and application <code>text/jsx</code> tags.</li>
+        <li>Declarative Bundless prefetch JSON unless it is deliberately preserved as data.</li>
+      </ul>
+      <p>
+        HtmlWebpackPlugin injects the emitted application bundle. The Bundless plugin removes
+        recognized browser-runtime tags from generated HTML when <code>stripHtmlRuntime</code> is enabled.
+      </p>
+
+      <h2>5. Build and serve the production output</h2>
+      <CodeBlock code={buildCommands} />
+      <p>Open the printed URL and verify the rendered application from <code>dist/</code>.</p>
+      <p>
+        <a href="https://github.com/karpatic/bundless/tree/main/examples/webpack-migration">Browse the complete migration example.</a>
+      </p>
+
+      <h2>6. Keep TypeScript checking explicit</h2>
+      <p>
+        The configuration above compiles JavaScript and JSX. The Bundless pre-loader can parse and
+        rewrite supported TypeScript source calls, but it never type-checks them. For a TS or TSX
+        migration, add the project’s normal TypeScript loader or compiler configuration and keep an
+        explicit check in local and CI commands, for example:
+      </p>
+      <CodeBlock code={typeCheckCommands} />
+      <p>
+        Passing the Webpack build proves that syntax and modules compiled; it does not prove that
+        TypeScript types are correct unless a type checker ran.
+      </p>
 
       <h2>Understand each part</h2>
       <h3>Plugin</h3>

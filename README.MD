@@ -4,15 +4,24 @@ Create React apps with a file server.
 
 Bundless resolves nested imports in the browser. Your React app can keep components in separate files, and those components can import more components, with no local bundler.
 
-Use it on shared hosting, GitHub Pages, a simple PHP site, or a sandbox or student account that includes static file serving. Some developers start with Preact to avoid React build setup. As an app grows, React and Preact differences can matter. Bundless lets you use React from the start while you still serve plain files.
+Use it on shared hosting, GitHub Pages, a simple PHP site, or any account that includes static file serving.
 
-**Bundless.js**: 36Kb Acorn runtime for JSX. Need TypeScript or TSX? Use Sucrase: 52Kb.
+The checked-in Brotli files are about 36.9 KiB for the Acorn runtime and 52.5 KiB for Sucrase. Those figures are measured binary KiB for the runtime file only; React and application code are outside that scope.
 
 [Usage Docs](https://bundless.dev/usage.html) · [Getting Started](https://bundless.dev/docs/getting-started.html) · [Playground](https://bundless.dev/playground.html) · [Benchmarks](https://bundless.dev/benchmarks.html) · [GitHub](https://github.com/karpatic/bundless)
 
 ## Getting Started
 
-Serve a plain HTML file over HTTP.
+Acquire a version-pinned runtime in a fresh folder:
+
+```sh
+npm init -y
+npm install --save-exact bundlessdev@1.0.12
+mkdir -p vendor components
+cp node_modules/bundlessdev/dist/bundless.acorn.min.js vendor/bundless.acorn.min.js
+```
+
+Serve a plain HTML file over HTTP. Keep local paths relative so the same folder works at a domain root or below a hosted subdirectory.
 
 Put this in the page if your JSX imports React by name:
 
@@ -32,7 +41,7 @@ External JSX:
 ```html
 <div id="react-root"></div>
 <script src="./App.jsx" type="text/jsx"></script>
-<script src="./dist/bundless.acorn.min.js" type="module"></script>
+<script src="./vendor/bundless.acorn.min.js" type="module"></script>
 ```
 
 Inline JSX:
@@ -49,14 +58,18 @@ Inline JSX:
 
   ReactDOM.render(<App />, document.getElementById("react-root"));
 </script>
-<script src="./dist/bundless.acorn.min.js" type="module"></script>
+<script src="./vendor/bundless.acorn.min.js" type="module"></script>
 ```
 
 TSX is the same idea, just swap in Sucrase and keep the app script as `text/jsx`:
 
+```sh
+cp node_modules/bundlessdev/dist/bundless.sucrase.min.js vendor/bundless.sucrase.min.js
+```
+
 ```html
 <script src="./App.tsx" type="text/jsx"></script>
-<script src="./dist/bundless.sucrase.min.js" type="module"></script>
+<script src="./vendor/bundless.sucrase.min.js" type="module"></script>
 ```
 
 Acorn is the small default. Sucrase handles JSX plus TypeScript. Babel, Meriyah, prefetching, Webpack migration, and the rest are in the [Usage Docs](https://bundless.dev/usage.html).

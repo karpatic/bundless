@@ -38,24 +38,24 @@
   <main class="home-page">
     <section class="home-hero">
       <div class="home-copy">
-        <p class="docs-kicker">Create React apps with a file server</p>
+        <p class="docs-kicker">React + JSX from static files</p>
         <h1>Build more, bundle less.</h1>
         <p>
-          Bundless resolves nested imports in the browser. Your React app can keep
-          components in separate files, and those components can import more components,
-          with no local bundler.
+          Serve <code>App.jsx</code>, <code>Header.jsx</code>, and <code>Button.jsx</code> as
+          separate files. Bundless compiles the JSX in the browser and follows every local
+          import—no bundler required.
         </p>
         <p>
-          Use it on shared hosting, GitHub Pages, a simple PHP site, or a sandbox
-          or student account that includes static file serving. Some developers start
-          with Preact to avoid React build setup. As an app grows, React and Preact
-          differences can matter. Bundless lets you use React from the start while you
-          still serve plain files.
+          Start with any static file server. Keep real React and a multi-file app today;
+          add a production build when the project needs one.
         </p>
-        <p><strong>Bundless.js</strong>: 36Kb Acorn runtime for JSX. Need TypeScript or TSX? Use Sucrase: 52Kb.</p>
+        <p class="home-size-note">
+          Acorn is about 36.9 KiB compressed; Sucrase is about 52.5 KiB. These are the
+          checked-in Brotli runtime files only, measured in binary KiB.
+        </p>
         <div class="docs-demo-links">
           <a class="docs-button-link" href="/docs/getting-started.html">Get started</a>
-          <a class="docs-button-link secondary" href="/usage.html">Usage Docs</a>
+          <a class="docs-button-link secondary" href="/playground.html">Try it live</a>
         </div>
       </div>
 
@@ -63,12 +63,13 @@
         <div class="home-browser-bar" aria-hidden="true">
           <span></span><span></span><span></span>
         </div>
-        <pre><code>&lt;script
-  src="./App.jsx"
-  type="text/jsx"
-&gt;&lt;/script&gt;
+        <pre><code>App.jsx
+  ↳ components/Header.jsx
+      ↳ components/Button.jsx
+
+&lt;script src="./App.jsx" type="text/jsx"&gt;&lt;/script&gt;
 &lt;script
-  src="/dist/bundless.acorn.min.js"
+  src="./vendor/bundless.acorn.min.js"
   type="module"
 &gt;&lt;/script&gt;</code></pre>
       </aside>
@@ -91,16 +92,15 @@
 
     <section class="home-inline" aria-labelledby="inline-heading">
       <div>
-        <p class="docs-kicker">INLINE WORKS TOO</p>
-        <h2 id="inline-heading">Keep a tiny demo tiny.</h2>
-        <p>The import map, runtime choices, and runnable examples live in the Usage Docs.</p>
+        <p class="docs-kicker">Start plain. Grow normally.</p>
+        <h2 id="inline-heading">A real component tree, served as-is.</h2>
+        <p>The starter includes runtime setup, nested imports, and paths that also work below a hosted subdirectory.</p>
       </div>
-      <pre><code>&lt;script type="text/jsx"&gt;
-  ReactDOM.render(
-    &lt;App /&gt;,
-    document.getElementById("root")
-  );
-&lt;/script&gt;</code></pre>
+      <pre><code>import Header from "./components/Header.jsx";
+
+function App() {
+  return &lt;Header /&gt;;
+}</code></pre>
     </section>
 
     <section class="home-memes" aria-labelledby="memes-heading">
@@ -115,10 +115,11 @@
     </section>
 
     <section class="home-links" aria-label="More Bundless links">
-      <a href="/docs/getting-started.html">Run the first page</a>
+      <a href="/docs/getting-started.html">Open the multi-file starter</a>
       <a href="/benchmarks.html">See load-time benchmarks</a>
       <a href="/migration.html">Move to Webpack</a>
       <a href="/docs/troubleshooting.html">Fix a page that will not run</a>
+      <a href="/DOCS.md">Read plain Markdown docs</a>
     </section>
   </main>
 </body>

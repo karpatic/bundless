@@ -4,7 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Vite React App</title>
-  <script type="module" crossorigin src="./vite.js"></script>
+  <script src="./ready.js"></script>
+  <script type="module">
+    import "./vite.js";
+    benchmarkWaitFor("#root", "legacy");
+  </script>
 </head>
 <body>
   <div id="root"></div>

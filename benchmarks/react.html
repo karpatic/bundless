@@ -4,9 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>React Demo</title> 
+  <script src="./ready.js"></script>
 </head>
 <body>
   <div id="react-root"></div>
   <script src="./react.js"></script>
+  <script>benchmarkWaitFor("#react-root", "legacy");</script>
 </body>
 </html>

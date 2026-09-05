@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Bundless counter benchmark</title>
+  <script src="./ready.js"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@17.0.2/es2022/react.mjs",
+        "react-dom": "https://esm.sh/react-dom@17.0.2/es2022/react-dom.mjs"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="benchmark-app"></div>
+  <script>
+    (function () {
+      const parameters = new URLSearchParams(location.search);
+      const runtime = parameters.get("runtime") || "acorn";
+      const target = parameters.get("target") || "react";
+      const syntax = parameters.get("syntax") || "jsx";
+      const allowedRuntimes = new Set(["acorn", "babel", "meriyah", "sucrase"]);
+      if (!allowedRuntimes.has(runtime) || !new Set(["react", "preact"]).has(target)) {
+        throw new Error("Unsupported benchmark runtime selection.");
+      }
+      if (syntax === "tsx" && runtime !== "sucrase") {
+        throw new Error("The TSX workload requires Sucrase.");
+      }
+
+      const application = document.createElement("script");
+      application.type = "text/jsx";
+      application.src = syntax === "tsx" ? "./workloads/Counter.tsx" : "./workloads/Counter.jsx";
+      document.body.appendChild(application);
+
+      const bundless = document.createElement("script");
+      bundless.type = "module";
+      bundless.src = `../dist/bundless.${runtime}.min.js`;
+      if (target === "preact") bundless.setAttribute("to", "preact");
+      document.body.appendChild(bundless);
+    })();
+  </script>
+</body>
+</html>

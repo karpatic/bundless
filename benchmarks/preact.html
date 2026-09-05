@@ -1,36 +1,34 @@
 <!doctype html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Acorn Parser Demo</title> 
-</head> 
+  <title>Preact counter benchmark</title>
+  <script src="./ready.js"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "preact": "https://esm.sh/preact@10.5.13/es2022/preact.mjs",
+        "preact/hooks": "https://esm.sh/preact@10.5.13/es2022/hooks.mjs"
+      }
+    }
+  </script>
+</head>
 <body>
-<script type="importmap">
-{
-  "imports": {
-    "preact": "https://esm.sh/preact@10.5.13/es2022/preact.mjs",
-    "preact/hooks": "https://esm.sh/preact@10.5.13/es2022/hooks.mjs"
-  }
-}
-</script>
-<div id="react-root"></div>  
-<script src="https://esm.sh/preact@10.5.13/es2022/preact.mjs" type="module"></script>
-<script src="https://esm.sh/preact@10.5.13/es2022/hooks.mjs" type="module"></script> 
-<script type="module">
-  import { h, render } from 'preact';
-  import { useState } from 'preact/hooks';
+  <div id="benchmark-app"></div>
+  <script type="module">
+    import { h, render } from "preact";
+    import { useEffect, useState } from "preact/hooks";
 
-  function Counter() {
-    const [count, setCount] = useState(0);
-    return (
-      h('div', null,
-        h('button', { onClick: () => setCount(count - 1) }, '-'),
-        h('span', null, `Count: ${count}`),
-        h('button', { onClick: () => setCount(count + 1) }, '+')
-      )
-    );
-  }
+    function Counter() {
+      const [count, setCount] = useState(0);
+      useEffect(() => benchmarkReady("#benchmark-app", "counter"), []);
+      return h("main", null,
+        h("h1", null, "Counter"),
+        h("button", { "data-counter": true, type: "button", onClick: () => setCount(count + 1) }, `Count: ${count}`)
+      );
+    }
 
-  render(h(Counter), document.getElementById('react-root'));
-</script>
+    render(h(Counter), document.getElementById("benchmark-app"));
+  </script>
 </body>
 </html>

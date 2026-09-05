@@ -12,7 +12,7 @@ export const docsSections = [
     title: "Start",
     items: [
       { id: "usage", label: "Usage", href: "/usage.html" },
-      { id: "getting-started", label: "Run the first page", href: "/docs/getting-started.html" },
+      { id: "getting-started", label: "Multi-file starter", href: "/docs/getting-started.html" },
     ],
   },
   {

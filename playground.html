@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <title>Bundless Playground</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Type JSX and see Bundless transpile it in the browser.">
+  <meta name="description" content="Edit a three-file React app, run it with Bundless, and inspect transpiled code or errors.">
   <link rel="canonical" href="/playground.html">
   <link rel="stylesheet" href="/docs.css">
   <script type="importmap">
@@ -48,64 +48,53 @@
     <section class="playground-intro">
       <h1>Bundless Playground</h1>
       <p>
-        Type React JSX, transpile it in this browser, and run the result in an iframe. This is a
-        quick way to inspect what Bundless sends to the page.
+        Edit a real <code>App.jsx → Header.jsx → Button.jsx</code> import chain. The live preview is
+        primary; the selected file’s transpiled code and any compile or runtime error stay visible.
       </p>
     </section>
 
     <section class="playground-workspace" aria-label="Playground workspace">
-      <section class="playground-panel">
+      <section class="playground-panel playground-source-panel">
         <div class="playground-panel-header">
-          <h2>Input JSX</h2>
-          <button class="playground-button" id="run-jsx" type="button">Transpile JSX</button>
+          <div>
+            <h2>Files</h2>
+            <span class="playground-file-path" id="active-file-path">App.jsx</span>
+          </div>
+          <div class="playground-controls">
+            <button class="playground-button secondary" id="reset-playground" type="button">Reset</button>
+            <button class="playground-button" id="run-jsx" type="button">Run app</button>
+          </div>
         </div>
-        <textarea class="playground-editor" id="jsx-code" spellcheck="false">import React from 'react';
-import ReactDOM from 'react-dom';
-
-const App = () => {
-  return (
-    <h1>Hello, World!</h1>
-  );
-};
-
-ReactDOM.render(<App />, document.getElementById('react-root'));</textarea>
+        <div class="playground-file-tabs" id="playground-file-tabs" role="tablist" aria-label="Application files"></div>
+        <textarea class="playground-editor" id="jsx-code" aria-label="Selected file source" spellcheck="false"></textarea>
       </section>
 
-      <section class="playground-panel">
+      <section class="playground-panel playground-preview-panel">
         <div class="playground-panel-header">
-          <h2>Transpiled Code</h2>
+          <div>
+            <h2>Preview</h2>
+            <span class="playground-file-path">Runs all three files with Bundless Sucrase</span>
+          </div>
         </div>
-        <textarea class="playground-editor" id="transpiled-code" spellcheck="false" readonly></textarea>
+        <iframe class="playground-output" id="output-frame" title="Bundless application preview" sandbox="allow-scripts allow-same-origin"></iframe>
+        <div class="playground-status" id="playground-status" role="status" aria-live="polite" data-status="idle">
+          <strong>Ready</strong>
+          <span>Edit a file or run the starter.</span>
+        </div>
       </section>
 
-      <section class="playground-panel playground-output-panel">
+      <section class="playground-panel playground-transpiled-panel">
         <div class="playground-panel-header">
-          <h2>Output</h2>
+          <div>
+            <h2>Transpiled code</h2>
+            <span class="playground-file-path" id="transpiled-file-path">App.jsx</span>
+          </div>
         </div>
-        <iframe class="playground-output" id="output-frame" title="Playground output"></iframe>
+        <textarea class="playground-editor playground-transpiled" id="transpiled-code" aria-label="Transpiled selected file" spellcheck="false" readonly></textarea>
       </section>
     </section>
   </main>
 
-  <script>
-    document.getElementById("run-jsx").addEventListener("click", async () => {
-      const jsxCode = document.getElementById("jsx-code").value;
-      const transpiledCode = await window.Bundless.transpileCode(jsxCode, "/", "playground.jsx");
-      document.getElementById("transpiled-code").value = transpiledCode;
-
-      const html = document.documentElement.cloneNode(true).outerHTML;
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, "text/html");
-      doc.body.innerHTML = '<div id="react-root"></div>';
-
-      const script = document.createElement("script");
-      script.type = "module";
-      script.textContent = transpiledCode;
-      doc.body.appendChild(script);
-
-      const iframe = document.getElementById("output-frame");
-      iframe.srcdoc = doc.documentElement.outerHTML;
-    });
-  </script>
+  <script src="/playground.js" type="module"></script>
 </body>
 </html>
