@@ -597,6 +597,7 @@ blockquote {
 }
 
 .home-inline h2,
+.home-community h2,
 .home-memes h2 {
   font-size: 2.35rem;
   letter-spacing: 0;
@@ -610,6 +611,54 @@ blockquote {
 
 .home-inline pre {
   margin: 0;
+}
+
+.home-community {
+  border-top: 1px solid var(--docs-border);
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: minmax(0, 0.72fr) minmax(320px, 1.28fr);
+  margin-top: 3rem;
+  padding-top: 2.5rem;
+}
+
+.home-community-heading p:not(.docs-kicker) {
+  color: var(--docs-muted);
+  margin: 0;
+  max-width: 32rem;
+}
+
+.home-community-grid {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.home-community-card {
+  align-items: center;
+  background: var(--docs-bg);
+  border: 1px solid var(--docs-border);
+  border-radius: var(--docs-radius);
+  color: inherit;
+  display: flex;
+  gap: 1.25rem;
+  justify-content: space-between;
+  padding: 1rem 1.1rem;
+  text-decoration: none;
+}
+
+.home-community-card:hover {
+  border-color: var(--docs-border-strong);
+  box-shadow: var(--docs-shadow);
+}
+
+.home-community-card strong {
+  color: var(--docs-text);
+}
+
+.home-community-card span {
+  color: var(--docs-muted);
+  font-size: 0.9rem;
+  text-align: right;
 }
 
 .home-memes {
@@ -1324,6 +1373,7 @@ blockquote {
   .home-hero,
   .home-points,
   .home-inline,
+  .home-community,
   .home-meme-grid {
     grid-template-columns: 1fr;
   }
@@ -1353,6 +1403,7 @@ blockquote {
   }
 
   .home-inline h2,
+  .home-community h2,
   .home-memes h2 {
     font-size: 1.8rem;
   }
