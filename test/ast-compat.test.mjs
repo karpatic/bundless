@@ -34,8 +34,9 @@ function transpile(parse, code, debug) {
 
 function execute(code, globals = {}) {
   const sandbox = { ...globals };
-  new Function('globalThis', 'React', 'UI', code)(
+  new Function('globalThis', 'window', 'React', 'UI', code)(
     sandbox,
+    globals.window,
     globals.React,
     globals.UI,
   );
@@ -127,18 +128,46 @@ for (const [parserName, parse] of parsers) {
     assert.deepEqual(execute(output).result, { objectResult: 5, arrayResult: 7 });
   });
 
-  test(`${parserName}: dynamic imports keep the custom/native boundary`, () => {
-    const localOutput = transpile(
+  test(`${parserName}: dynamic imports execute across the custom/native boundary`, () => {
+    const output = transpile(
       parse,
-      'globalThis.result = import("./lazy.jsx?mode=test");',
+      `
+        const nonliteralRelative = "./runtime-relative.jsx";
+        globalThis.result = [
+          import("./lazy.jsx?mode=test"),
+          import("webmidi"),
+          import("https://cdn.example/module.js"),
+          import(nonliteralRelative),
+        ];
+      `,
       { filePath: 'https://example.test/app/entry.jsx' },
     );
-    const packageOutput = transpile(parse, 'globalThis.result = import("webmidi");');
-    const remoteOutput = transpile(parse, 'globalThis.result = import("https://cdn.example/module.js");');
+    const calls = [];
+    const window = {
+      import(specifier) {
+        calls.push(['custom', specifier]);
+        return { route: 'custom', specifier };
+      },
+      Bundless: {
+        nativeImport(specifier) {
+          calls.push(['native', specifier]);
+          return { route: 'native', specifier };
+        },
+      },
+    };
 
-    assert.match(localOutput, /window\.import\("https:\/\/example\.test\/app\/lazy\.jsx\?mode=test"\)/);
-    assert.match(packageOutput, /window\.Bundless\.nativeImport\("webmidi"\)/);
-    assert.match(remoteOutput, /window\.Bundless\.nativeImport\("https:\/\/cdn\.example\/module\.js"\)/);
+    const { result } = execute(output, { window });
+
+    assert.deepEqual(calls, [
+      ['custom', 'https://example.test/app/lazy.jsx?mode=test'],
+      ['native', 'webmidi'],
+      ['native', 'https://cdn.example/module.js'],
+      ['native', './runtime-relative.jsx'],
+    ]);
+    assert.deepEqual(result, calls.map(([route, specifier]) => ({ route, specifier })));
+
+    // This proves nonliteral-relative dispatch only; the stub cannot establish
+    // how native ESM resolves that specifier after Bundless evaluates blob code.
   });
 
   test(`${parserName}: throw preserves an existing new expression`, () => {
