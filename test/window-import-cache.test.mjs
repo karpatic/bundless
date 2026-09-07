@@ -186,7 +186,7 @@ test('handleImports rewrites multiline local JSX imports through window.import',
   assert.doesNotMatch(transformed, /from ['"]\.\/views\/panel\.jsx/);
 });
 
-test('handleImports preserves bare package and non-module local imports', async () => {
+test('handleImports uses native default-import interop and leaves dynamic imports for AST routing', async () => {
   const { handleImports } = createHarness();
   const source = [
     "import React from 'react';",
@@ -194,5 +194,19 @@ test('handleImports preserves bare package and non-module local imports', async 
     "const lazy = import('./lazy.jsx');",
   ].join('\n');
 
-  assert.equal(await handleImports(source, 'https://example.test/app/', 'entry.jsx'), source);
+  const transformed = await handleImports(source, 'https://example.test/app/', 'entry.jsx');
+
+  assert.match(transformed, /window\.Bundless\.nativeImport\("react"\)/);
+  assert.match(transformed, /window\.Bundless\.nativeImport\("\.\/panel\.css"\)/);
+  assert.match(transformed, /const lazy = import\('\.\/lazy\.jsx'\)/);
+});
+
+test('toPreact keeps fragments as an explicit Preact binding', () => {
+  const { toPreact, window } = createHarness();
+  window.Bundless.to = 'preact';
+
+  const transformed = toPreact('React.createElement(React.Fragment, null, "child")');
+
+  assert.match(transformed, /import \{ Fragment, h, render \} from/);
+  assert.match(transformed, /h\(Fragment, null, "child"\)/);
 });

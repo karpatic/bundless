@@ -4,6 +4,68 @@ function transformAST(ast, debug = {}) {
   let indent = 0;
   const spacing = "  ";
 
+  function transformJSXName(node) {
+    if (node.type === "JSXIdentifier") {
+      return node.name;
+    }
+    if (node.type === "JSXMemberExpression") {
+      return `${transformJSXName(node.object)}.${transformJSXName(node.property)}`;
+    }
+    if (node.type === "JSXNamespacedName") {
+      return `${transformJSXName(node.namespace)}:${transformJSXName(node.name)}`;
+    }
+    return transformNode(node);
+  }
+
+  function transformJSXTagName(node) {
+    const name = transformJSXName(node);
+    return node.type === "JSXIdentifier" && name[0] === name[0].toLowerCase()
+      ? JSON.stringify(name)
+      : name;
+  }
+
+  function transformPropertyKey(node) {
+    if (node.computed) {
+      return `[${transformNode(node.key)}]`;
+    }
+    if (node.key.type === "Identifier") {
+      return node.key.name;
+    }
+    return node.key.raw ?? JSON.stringify(node.key.value);
+  }
+
+  function transformJSXChildren(children) {
+    return children.map(transformNode).filter(Boolean);
+  }
+
+  function transformCreateElement(tagName, props, children) {
+    if (children.length === 0) {
+      return `React.createElement(${tagName}, ${props})`;
+    }
+    return `React.createElement(${tagName}, ${props},\n${children
+      .map((child) => `${getIndent()}${spacing}${child}`)
+      .join(",\n")})`;
+  }
+
+  function isTransformableLocalDynamicImport(node) {
+    if (node.type !== "Literal" || typeof node.value !== "string") {
+      return false;
+    }
+    return /^(?:\.{1,2}\/|\/)/.test(node.value) &&
+      /\.(?:mjs|jsx?|tsx?)$/i.test(node.value.split(/[?#]/)[0]);
+  }
+
+  function transformLocalDynamicImportSource(node) {
+    if (!debug.filePath) {
+      return transformNode(node);
+    }
+    try {
+      return JSON.stringify(new URL(node.value, debug.filePath).href);
+    } catch (error) {
+      return transformNode(node);
+    }
+  }
+
   function getIndent() {
     return spacing.repeat(indent);
   }
@@ -32,16 +94,24 @@ function transformAST(ast, debug = {}) {
         const forBody = transformNode(node.body);
         result = `for (${init ?? ''}${init?.endsWith(';') ? '' : ';'} ${test ?? ''}; ${update ?? ''}) ${forBody}`;
         break;
+      case "ForOfStatement": {
+        const left = transformNode(node.left).replace(/;$/, "");
+        result = `for ${node.await ? "await " : ""}(${left} of ${transformNode(node.right)}) ${transformNode(node.body)}`;
+        break;
+      }
+      case "WhileStatement":
+        result = `while (${transformNode(node.test)}) ${transformNode(node.body)}`;
+        break;
       case "UpdateExpression":
         result = `${transformNode(node.argument)}${node.operator}`;
         break;
       case "CatchClause":
-        const param = node.param ? node.param.name : "";
+        const param = node.param ? transformNode(node.param) : "";
         const catchBody = transformNode(node.body);
         result = `catch (${param}) ${catchBody}`;
         break;
       case "Literal":
-        result = node.raw;
+        result = node.raw ?? JSON.stringify(node.value);
         break;
       case "Identifier":
         result = node.name;
@@ -68,7 +138,9 @@ function transformAST(ast, debug = {}) {
         result = node.local.name;
         break;
       case "ImportExpression":
-        result = `window.import(${transformNode(node.source)})`;
+        result = isTransformableLocalDynamicImport(node.source)
+          ? `window.import(${transformLocalDynamicImportSource(node.source)})`
+          : `window.Bundless.nativeImport(${transformNode(node.source)})`;
         break;
       case "AssignmentExpression": {
         result = `${transformNode(node.left)} ${node.operator} ${transformNode(
@@ -80,26 +152,22 @@ function transformAST(ast, debug = {}) {
         result = `...${transformNode(node.argument)}`;
         break;
       case "LogicalExpression":
-        result = `${transformNode(node.left)} ${node.operator} ${transformNode(
+        result = `(${transformNode(node.left)} ${node.operator} ${transformNode(
           node.right
-        )}`;
+        )})`;
         break;
       case "ChainExpression":
         result = `${transformNode(node.expression)}`;
         break;
       case "JSXFragment":
-        result = node.children.map(transformNode).join("\n");
+        indent++;
+        const fragmentChildren = transformJSXChildren(node.children);
+        indent--;
+        result = transformCreateElement("React.Fragment", "null", fragmentChildren);
         break;
-        case "JSXExpressionContainer":
-          // Wrap the expression in parentheses to preserve the original structure
-          // and ensure operator precedence is maintained
-          const exprValue = transformNode(node.expression);
-          // For complex expressions, ensure we preserve parentheses
-          result = node.expression.type === "BinaryExpression" || 
-                  node.expression.type === "CallExpression" || 
-                  node.expression.type === "MemberExpression" && node.expression.object.type === "BinaryExpression" ? 
-                  `(${exprValue})` : exprValue;
-          break;
+      case "JSXExpressionContainer":
+        result = transformNode(node.expression);
+        break;
       case "JSXEmptyExpression":
         result = "";
         break;
@@ -109,7 +177,7 @@ function transformAST(ast, debug = {}) {
           .join(", ")})`;
         break;
       case "ThrowStatement":
-        result = `throw new ${transformNode(node.argument)}`;
+        result = `throw ${transformNode(node.argument)};`;
         break;
       case "TemplateLiteral":
         result =
@@ -170,13 +238,7 @@ function transformAST(ast, debug = {}) {
         break;
       case "FunctionDeclaration":
         const params = node.params
-          .map((param) => {
-            if (param.type === "ObjectPattern") {
-              const props = param.properties.map((p) => p.key.name).join(", ");
-              return `{${props}}`;
-            }
-            return param.name;
-          })
+          .map(transformNode)
           .join(", ");
         const body = transformNode(node.body);
         result = `function ${node.id.name}(${params}) ${body}`;
@@ -207,15 +269,14 @@ function transformAST(ast, debug = {}) {
         const testExprConditional = transformNode(node.test);
         const consequentExpr = transformNode(node.consequent);
         const alternateExpr = transformNode(node.alternate);
-        result = `${testExprConditional} ? ${consequentExpr} : ${alternateExpr}`;
+        result = `(${testExprConditional} ? ${consequentExpr} : ${alternateExpr})`;
         break;
       case "ExportNamedDeclaration":
         result = `export ${transformNode(node.declaration)}`;
         break;
       case "JSXElement": {
         indent++;
-        const name = node.openingElement.name.name;
-        const tagName = name[0] === name[0].toUpperCase() ? name : `'${name}'`;
+        const tagName = transformJSXTagName(node.openingElement.name);
         const props = node.openingElement.attributes
           .map((attr) => {
             if (attr.type === "JSXSpreadAttribute") {
@@ -229,17 +290,9 @@ function transformAST(ast, debug = {}) {
             return `${name}: ${value}`;
           })
           .join(", ");
-        const children = node.children
-          .map((child) => transformNode(child))
-          .filter(Boolean);
+        const children = transformJSXChildren(node.children);
         indent--;
-        if (children.length === 0) {
-          result = `React.createElement(${tagName}, {${props}})`;
-        } else {
-          result = `React.createElement(${tagName}, {${props}},\n${children
-            .map((child) => `${getIndent()}${spacing}${child}`)
-            .join(",\n")})`;
-        }
+        result = transformCreateElement(tagName, `{${props}}`, children);
         break;
       }
       case "JSXText":
@@ -264,61 +317,19 @@ function transformAST(ast, debug = {}) {
         break;
       case "VariableDeclarator":
         if (!node.init) {
-          result = `${transformNode(node.id)};`;
+          result = transformNode(node.id);
         } else {
           const init = transformNode(node.init);
-          if (node.id.type === "ArrayPattern") {
-            const elements = node.id.elements
-              .map((el) => (el ? el.name : "undefined"))
-              .join(", ");
-            result = `[${elements}] = ${init}`;
-          } else if (node.id.type === "ObjectPattern") {
-            const properties = node.id.properties
-              .map((prop) => {
-                if (prop.key.type === "Identifier") {
-                  return prop.key.name;
-                }
-                return prop.key.value;
-              })
-              .join(", ");
-            result = `{${properties}} = ${init}`;
-          } else {
-            result = `${node.id.name} = ${init}`;
-          }
+          result = `${transformNode(node.id)} = ${init}`;
         }
         break;
       case "CallExpression":
-        if (node.callee.type === "MemberExpression") {
-          const property = node.callee.property.name;
-          const args = node.arguments.map(transformNode).join(", ");
-          
-          // Check if object is a BinaryExpression that needs parentheses
-          const object = node.callee.object;
-          const needsParens = object.type === "BinaryExpression" || 
-                              (object.type === "BinaryExpression" && 
-                              (object.left.type === "BinaryExpression" || 
-                                object.right.type === "BinaryExpression"));
-          
-          const objectCode = transformNode(object);
-          result = `${needsParens ? `(${objectCode})` : objectCode}.${property}(${args})`;
-        } else {
-          const args = node.arguments.map(transformNode).join(", ");
-          result = `${transformNode(node.callee)}(${args})`;
-        }
+        const args = node.arguments.map(transformNode).join(", ");
+        result = `${transformNode(node.callee)}${node.optional ? "?." : ""}(${args})`;
         break;
       case "ArrowFunctionExpression":
         const arrowParams = node.params
-          .map((param) => {
-            if (param.type === "ObjectPattern") {
-              const props = param.properties.map((p) => p.key.name).join(", ");
-              return `{${props}}`;
-            } else if (param.type === "AssignmentPattern") {
-              const left = transformNode(param.left);
-              const right = transformNode(param.right);
-              return `${left} = ${right}`;
-            }
-            return param.name;
-          })
+          .map(transformNode)
           .join(", ");
         indent++;
         const arrowBody =
@@ -332,27 +343,37 @@ function transformAST(ast, debug = {}) {
         result = `${asyncKeyword}(${arrowParams}) => ${arrowBody}`;
         break;
       case "ObjectExpression":
-        const properties = node.properties
-          .map((p) => {
-            if (p.type === "SpreadElement") {
-              return `...${transformNode(p.argument)}`;
-            } else {
-              const key = p.key.name || p.key.value;
-              const value = transformNode(p.value);
-              return `${key}: ${value}`;
-            }
-          })
-          .join(", ");
+        const properties = node.properties.map(transformNode).join(", ");
         result = `{${properties}}`;
         break;
+      case "Property": {
+        if (node.shorthand) {
+          result = transformNode(node.value);
+        } else {
+          result = `${transformPropertyKey(node)}: ${transformNode(node.value)}`;
+        }
+        break;
+      }
+      case "ObjectPattern":
+        result = `{${node.properties.map(transformNode).join(", ")}}`;
+        break;
+      case "ArrayPattern":
+        result = `[${node.elements.map((element) => element ? transformNode(element) : "").join(", ")}]`;
+        break;
+      case "AssignmentPattern":
+        result = `${transformNode(node.left)} = ${transformNode(node.right)}`;
+        break;
+      case "RestElement":
+        result = `...${transformNode(node.argument)}`;
+        break;
       case "BinaryExpression":
-        result = `${transformNode(node.left)} ${node.operator} ${transformNode(
+        result = `(${transformNode(node.left)} ${node.operator} ${transformNode(
           node.right
-        )}`;
+        )})`;
         break;
       case "MemberExpression":
         if (node.computed) {
-          result = `${transformNode(node.object)}[${transformNode(
+          result = `${transformNode(node.object)}${node.optional ? "?.[" : "["}${transformNode(
             node.property
           )}]`;
         } else {
@@ -386,7 +407,7 @@ function transformAST(ast, debug = {}) {
 function toPreact(code) {
   if (window.Bundless.to == "preact") {
     let prefix;
-    prefix = `import { h, render } from 'https://esm.sh/preact@10.5.13/es2022/preact.mjs';\n`;
+    prefix = `import { Fragment, h, render } from 'https://esm.sh/preact@10.5.13/es2022/preact.mjs';\n`;
     prefix += `import { useState, useEffect, useRef, useMemo } from 'https://esm.sh/preact@10.5.13/es2022/hooks.mjs';\n`;
     code = code.replace(/React.createElement/g, "h");
     code = code.replace(/ReactDOM.render/g, "render");
@@ -394,7 +415,7 @@ function toPreact(code) {
     code = code.replace(/React.useEffect/g, "useEffect");
     code = code.replace(/React.useRef/g, "useRef");
     code = code.replace(/React.useMemo/g, "useMemo");
-    code = code.replace(/React.Fragment/g, "");
+    code = code.replace(/React.Fragment/g, "Fragment");
 
     code = code.replace(/import\s+[\s\S]*?\s+from ['"]react(?:-dom)?(?:\/[^'"]*)?['"];?\n?/g, "");
     code = prefix + code;
