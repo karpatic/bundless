@@ -6,35 +6,38 @@ import { handleImports, handleScriptTag, hasBundlessPrefetchScriptTags, runWhenD
 
 window.Bundless = {
   ...window.Bundless,
+  transformModuleSyntax,
   transpileCode,
   to: 'react',
   cache: true,
   prod: false,
 };
 
-function transformJSX(code, filePath) {
+function transformJSX(code, filePath, includeSourceMap = true) {
   // console.log('transformJSX:', filePath );
   const result = Babel.transform(code, {
     presets: ['react', ['env', { modules: false }]],
-    sourceMaps: true,
+    sourceMaps: includeSourceMap,
     sourceFileName: filePath,
     filename: filePath,
     filenameRelative: filePath
   });
-  let { code: transpiledCode, map  } = result;
-  map.file = 'input.js';
-  delete map.sourcesContent;
-  // delete map.sourceRoot;
-  console.log('transformJSX:', map);
-  const sourceMapComment = `//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(map))}`;
-  return `${transpiledCode}\n${sourceMapComment}`;
+  if (result.map) {
+    result.map.file = 'input.js';
+    delete result.map.sourcesContent;
+  }
+  return result;
+}
+
+async function transformModuleSyntax(code, pathTo, filename) {
+  return transformJSX(code, pathTo + filename, false).code;
 }
 
 async function transpileCode(code, pathTo, filename) {
-  const processedCode = await handleImports(code, pathTo, filename);
-  // console.log('transpileCode:', {pathTo, filename});
-  const transpiledCode = transformJSX(processedCode, pathTo + filename);
-  return transpiledCode;
+  const { code: compiledCode, map } = transformJSX(code, pathTo + filename);
+  const transpiledCode = await handleImports(compiledCode, pathTo, filename);
+  const sourceMapComment = `//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(map))}`;
+  return `${transpiledCode}\n${sourceMapComment}`;
 }
 
 runWhenDocumentReady(async () => {

@@ -1,8 +1,15 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { init as initModuleLexer, parse as parseModuleSyntax } from 'es-module-lexer';
 
-const source = await readFile(new URL('../src/bundless.utils.js', import.meta.url), 'utf8');
+await initModuleLexer;
+
+const sourceWithImport = await readFile(new URL('../src/bundless.utils.js', import.meta.url), 'utf8');
+const source = sourceWithImport.replace(
+  /\nimport \{ init as initModuleLexer, parse as parseModuleSyntax \} from "es-module-lexer";\s*/,
+  '\n'
+);
 const executableSource = source.replace(
   /\nexport \{[^}]+\};\s*$/,
   '\nreturn { handleImports, handleScriptTag, toPreact };'
@@ -50,6 +57,7 @@ function createHarness({
         }
         return `export const loadedFrom = ${JSON.stringify(args[1] + args[2])};`;
       },
+      transformModuleSyntax: async (code) => code,
     },
   };
 
@@ -78,8 +86,29 @@ function createHarness({
     warning: () => {},
   };
 
-  const install = new Function('window', 'document', 'location', 'fetch', 'Blob', 'URL', 'console', executableSource);
-  const exports = install(window, document, location, fetch, TestBlob, TestURL, testConsole);
+  const install = new Function(
+    'window',
+    'document',
+    'location',
+    'fetch',
+    'Blob',
+    'URL',
+    'console',
+    'initModuleLexer',
+    'parseModuleSyntax',
+    executableSource
+  );
+  const exports = install(
+    window,
+    document,
+    location,
+    fetch,
+    TestBlob,
+    TestURL,
+    testConsole,
+    Promise.resolve(),
+    parseModuleSyntax
+  );
 
   return { ...exports, calls, window };
 }
@@ -186,19 +215,100 @@ test('handleImports rewrites multiline local JSX imports through window.import',
   assert.doesNotMatch(transformed, /from ['"]\.\/views\/panel\.jsx/);
 });
 
-test('handleImports uses native default-import interop and leaves dynamic imports for AST routing', async () => {
+test('handleImports preserves bare imports and routes relative dynamic imports with their caller URL', async () => {
   const { handleImports } = createHarness();
   const source = [
     "import React from 'react';",
     "import styles from './panel.css';",
     "const lazy = import('./lazy.jsx');",
+    "const nativeModule = import('./native.mjs?mode=controller');",
+    "const computed = import(nextModule);",
   ].join('\n');
 
   const transformed = await handleImports(source, 'https://example.test/app/', 'entry.jsx');
 
-  assert.match(transformed, /window\.Bundless\.nativeImport\("react"\)/);
-  assert.match(transformed, /window\.Bundless\.nativeImport\("\.\/panel\.css"\)/);
-  assert.match(transformed, /const lazy = import\('\.\/lazy\.jsx'\)/);
+  assert.match(transformed, /import React from 'react'/);
+  assert.match(transformed, /import styles from 'https:\/\/example\.test\/app\/panel\.css'/);
+  assert.match(transformed, /window\.Bundless\.importFrom\('\.\/lazy\.jsx', "https:\/\/example\.test\/app\/entry\.jsx"\)/);
+  assert.match(transformed, /window\.Bundless\.importFrom\('\.\/native\.mjs\?mode=controller', "https:\/\/example\.test\/app\/entry\.jsx"\)/);
+  assert.match(transformed, /window\.Bundless\.importFrom\(nextModule, "https:\/\/example\.test\/app\/entry\.jsx"\)/);
+});
+
+test('importFrom routes source modules through the cache and native modules from the original caller', async () => {
+  const { window } = createHarness();
+  const calls = [];
+  window.import = (specifier) => {
+    calls.push(['custom', specifier]);
+    return Promise.resolve({ specifier });
+  };
+  window.Bundless.nativeImport = (specifier) => {
+    calls.push(['native', specifier]);
+    return Promise.resolve({ specifier });
+  };
+
+  await window.Bundless.importFrom('./view.tsx?v=2', 'https://example.test/app/entry.jsx');
+  await window.Bundless.importFrom('./controller.mjs?v=3', 'https://example.test/app/entry.jsx');
+  await window.Bundless.importFrom('mapped-package', 'https://example.test/app/entry.jsx');
+
+  assert.deepEqual(calls, [
+    ['custom', 'https://example.test/app/view.tsx?v=2'],
+    ['native', 'https://example.test/app/controller.mjs?v=3'],
+    ['native', 'mapped-package'],
+  ]);
+});
+
+test('window.import evaluates named, namespace, default, and star re-exports with query URLs', async () => {
+  const sources = new Map([
+    ['https://example.test/app/dep.js?v=opening-ramp', [
+      'export const getKeyStartPlacement = 8;',
+      'export const getKeyToothSupport = 13;',
+      'export const getKeyToothDiameterAtRadius = 34;',
+      'export default 21;',
+    ].join('\n')],
+    ['https://example.test/app/extra.js?v=star', 'export const starValue = 55;'],
+    ['https://example.test/app/barrel.js?v=entry', [
+      "export { getKeyStartPlacement, getKeyToothSupport, getKeyToothDiameterAtRadius, default as defaultPlacement } from './dep.js?v=opening-ramp';",
+      "export * as placement from './dep.js?v=opening-ramp';",
+      "export * from './extra.js?v=star';",
+    ].join('\n')],
+  ]);
+  const harness = createHarness({
+    fetchImpl: async (url) => ({
+      ok: sources.has(url),
+      statusText: sources.has(url) ? 'OK' : 'Not Found',
+      text: async () => sources.get(url),
+    }),
+  });
+  harness.window.Bundless.transpileCode = (code, basePath, filename) =>
+    harness.handleImports(code, basePath, filename);
+
+  const previousWindow = globalThis.window;
+  globalThis.window = harness.window;
+  try {
+    const module = await harness.window.import('./barrel.js?v=entry');
+
+    assert.equal(module.getKeyStartPlacement, 8);
+    assert.equal(module.getKeyToothSupport, 13);
+    assert.equal(module.getKeyToothDiameterAtRadius, 34);
+    assert.equal(module.defaultPlacement, 21);
+    assert.equal(module.placement.getKeyToothSupport, 13);
+    assert.equal(module.starValue, 55);
+    assert.deepEqual(harness.calls.fetch.sort(), [...sources.keys()].sort());
+  } finally {
+    globalThis.window = previousWindow;
+  }
+});
+
+test('handleImports rejects caller-relative dynamic import attributes explicitly', async () => {
+  const { handleImports } = createHarness();
+  await assert.rejects(
+    handleImports(
+      "const data = import('./data.js', { with: { type: 'json' } });",
+      'https://example.test/app/',
+      'entry.jsx'
+    ),
+    /cannot route caller-relative dynamic imports with import attributes/
+  );
 });
 
 test('toPreact keeps fragments as an explicit Preact binding', () => {

@@ -6,7 +6,7 @@ Bundless resolves nested imports in the browser. Your React app can keep compone
 
 Use it on shared hosting, GitHub Pages, a simple PHP site, or any account that includes static file serving.
 
-The checked-in Brotli files are about 36.9 KiB for the Acorn runtime and 52.5 KiB for Sucrase. Those figures are measured binary KiB for the runtime file only; React and application code are outside that scope.
+The checked-in Brotli files are about 44.6 KiB for the default Acorn runtime and 60.0 KiB for Sucrase. Those figures are measured binary KiB for the runtime file only; React and application code are outside that scope.
 
 [Usage Docs](https://bundless.dev/usage.html) · [Getting Started](https://bundless.dev/docs/getting-started.html) · [Playground](https://bundless.dev/playground.html) · [Benchmarks](https://bundless.dev/benchmarks.html) · [GitHub](https://github.com/karpatic/bundless)
 

@@ -30,8 +30,9 @@ export default function RuntimesPage() {
         omit inline runtime source maps and their transfer and runtime cost.
       </p>
       <p>
-        Babel and Sucrase have one browser build each. Babel uses Babel Standalone source-map
-        behavior. Sucrase includes its own inline source maps.
+        Babel and Sucrase have one browser build each. The Babel build requests a source map from
+        Babel Standalone and appends it inline. The Sucrase build generates and appends its source
+        map inline.
       </p>
 
       <h2>Target Preact only for compatible code</h2>
@@ -44,7 +45,8 @@ export default function RuntimesPage() {
 
       <Callout title="Measure the selected runtime">
         <p>
-          The checked-in Brotli files are approximately 37 KiB for Acorn and 53 KiB for Sucrase.
+          The checked-in Brotli files are approximately 44.6 KiB for the default Acorn runtime and
+          60.0 KiB for Sucrase.
           Parser download and browser transformation affect startup. Test the target page on the
           target devices and network.
         </p>

@@ -3,40 +3,36 @@ import * as sucrase from './../rsc/sucrase/sucrase.esm.js';
 
 window.Bundless = {
   ...window.Bundless,
+  transformModuleSyntax,
   transpileCode,
   cache: true,
   to: 'react',
   prod: false,
 };
 
-function transformJSX(code, filePath) {
+function transformJSX(code, filePath, includeSourceMap = true) {
   // console.log('transformJSX:', {code, filePath});
   const result = sucrase.transform(
     code, {
       transforms: ['jsx', 'typescript'],
-      sourceMapOptions: { compiledFilename: 'input.js' },
+      ...(includeSourceMap ? { sourceMapOptions: { compiledFilename: 'input.js' } } : {}),
       filePath: filePath
   });
+  return result;
+}
 
-
-
-  let { code: transpiledCode, sourceMap } = result;
-
-  const sourceMapComment = `//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(sourceMap))}`;
-
-  if(window.Bundless.to === 'preact'){
-    transpiledCode = toPreact(transpiledCode);
-  }
-
-  // console.log('transformJSX:', {sourceMap});
-  return `${transpiledCode}\n${sourceMapComment}`;
+async function transformModuleSyntax(code, basePath, filename) {
+  return transformJSX(code, basePath + filename, false).code;
 }
 
 async function transpileCode(code, basePath, filename) {
-  const processedCode = await handleImports(code, basePath, filename);
-  // console.log('transpileCode:', {basePath, filename});
-  const transpiledCode = transformJSX(processedCode, basePath + filename);
-  return transpiledCode;
+  const { code: compiledCode, sourceMap } = transformJSX(code, basePath + filename);
+  let transpiledCode = await handleImports(compiledCode, basePath, filename);
+  if(window.Bundless.to === 'preact'){
+    transpiledCode = toPreact(transpiledCode);
+  }
+  const sourceMapComment = `//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(sourceMap))}`;
+  return `${transpiledCode}\n${sourceMapComment}`;
 }
 
 runWhenDocumentReady(async () => {
@@ -69,4 +65,3 @@ runWhenDocumentReady(async () => {
     await handleScriptTag(scriptTag);
   }
 });
-

@@ -7,6 +7,7 @@ import { handleImports, handleScriptTag, hasBundlessPrefetchScriptTags, runWhenD
 window.Bundless = {
   ...window.Bundless,
   transformAST,
+  transformModuleSyntax,
   transpileCode,
   cache: true,
   to: 'react',
@@ -14,7 +15,7 @@ window.Bundless = {
 };
 
 let SMTools = {};
-async function transformJSX(code, filePath) {
+async function transformJSX(code, filePath, includeSourceMap = true) {
   const acornWithJsx = Parser.extend(acornJsxPlugin());
   const ast = acornWithJsx.parse(code, {
     ecmaVersion: "latest",
@@ -23,7 +24,7 @@ async function transformJSX(code, filePath) {
   });
 
   // Update source mapper settings for this specific file
-  if (!window.Bundless.prod) {
+  if (includeSourceMap && !window.Bundless.prod) {
 
     const loadSourceMapTools = async () => {
       // console.log('Loading Acorn');
@@ -47,29 +48,31 @@ async function transformJSX(code, filePath) {
     SMTools.updatePosition = sourceMapper.updatePosition;
   }
 
-  const result = transformAST(ast, {
-    code, filePath, ...SMTools
+  return transformAST(ast, {
+    code,
+    filePath,
+    ...(includeSourceMap ? SMTools : {}),
   });
-  let { code: transpiledCode, map } = result;
+}
+
+async function transformModuleSyntax(code, pathTo, filename) {
+  const result = await transformJSX(code, pathTo + filename, false);
+  return result.code;
+}
+
+async function transpileCode(code, pathTo, filename) {
+  const { code: compiledCode, map } = await transformJSX(code, pathTo + filename);
+  let transpiledCode = await handleImports(compiledCode, pathTo, filename);
   if(window.Bundless.to === 'preact'){
     transpiledCode = toPreact(transpiledCode);
   }
   if(window.Bundless.prod){
-    return transpiledCode
+    return transpiledCode;
   }
   else{
-    // console.log('~~~~ transformJSX:', 'filePath', filePath);
     const sourceMapComment = `//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(map))}`;
     return `${transpiledCode}\n${sourceMapComment}`;
   }
-}
-
-async function transpileCode(code, pathTo, filename) {
-  // console.log('Transpiler: Transpiling:', filename);
-  const processedCode = await handleImports(code, pathTo, filename);
-  // console.log('Processed code: ', processedCode);
-  const transpiledCode = transformJSX(processedCode, pathTo + filename);
-  return transpiledCode;
 }
 
 runWhenDocumentReady(async () => {

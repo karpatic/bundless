@@ -38,6 +38,15 @@ function transformAST(ast, debug = {}) {
     return children.map(transformNode).filter(Boolean);
   }
 
+  function getOriginalSource(node) {
+    if (typeof debug.code !== "string" ||
+        !Number.isInteger(node.start) ||
+        !Number.isInteger(node.end)) {
+      throw new TypeError(`Bundless cannot preserve source for ${node.type}.`);
+    }
+    return debug.code.slice(node.start, node.end);
+  }
+
   function transformCreateElement(tagName, props, children) {
     if (children.length === 0) {
       return `React.createElement(${tagName}, ${props})`;
@@ -45,25 +54,6 @@ function transformAST(ast, debug = {}) {
     return `React.createElement(${tagName}, ${props},\n${children
       .map((child) => `${getIndent()}${spacing}${child}`)
       .join(",\n")})`;
-  }
-
-  function isTransformableLocalDynamicImport(node) {
-    if (node.type !== "Literal" || typeof node.value !== "string") {
-      return false;
-    }
-    return /^(?:\.{1,2}\/|\/)/.test(node.value) &&
-      /\.(?:mjs|jsx?|tsx?)$/i.test(node.value.split(/[?#]/)[0]);
-  }
-
-  function transformLocalDynamicImportSource(node) {
-    if (!debug.filePath) {
-      return transformNode(node);
-    }
-    try {
-      return JSON.stringify(new URL(node.value, debug.filePath).href);
-    } catch (error) {
-      return transformNode(node);
-    }
   }
 
   function getIndent() {
@@ -103,12 +93,14 @@ function transformAST(ast, debug = {}) {
         result = `while (${transformNode(node.test)}) ${transformNode(node.body)}`;
         break;
       case "UpdateExpression":
-        result = `${transformNode(node.argument)}${node.operator}`;
+        result = node.prefix
+          ? `(${node.operator}${transformNode(node.argument)})`
+          : `(${transformNode(node.argument)}${node.operator})`;
         break;
       case "CatchClause":
         const param = node.param ? transformNode(node.param) : "";
         const catchBody = transformNode(node.body);
-        result = `catch (${param}) ${catchBody}`;
+        result = param ? `catch (${param}) ${catchBody}` : `catch ${catchBody}`;
         break;
       case "Literal":
         result = node.raw ?? JSON.stringify(node.value);
@@ -117,7 +109,7 @@ function transformAST(ast, debug = {}) {
         result = node.name;
         break;
       case "UnaryExpression":
-        result = `${node.operator} ${transformNode(node.argument)}`;
+        result = `(${node.operator} ${transformNode(node.argument)})`;
         break;
       case "Program":
         result = node.body.map(transformNode).join("\n\n");
@@ -138,14 +130,12 @@ function transformAST(ast, debug = {}) {
         result = node.local.name;
         break;
       case "ImportExpression":
-        result = isTransformableLocalDynamicImport(node.source)
-          ? `window.import(${transformLocalDynamicImportSource(node.source)})`
-          : `window.Bundless.nativeImport(${transformNode(node.source)})`;
+        result = getOriginalSource(node);
         break;
       case "AssignmentExpression": {
-        result = `${transformNode(node.left)} ${node.operator} ${transformNode(
+        result = `(${transformNode(node.left)} ${node.operator} ${transformNode(
           node.right
-        )}`;
+        )})`;
         break;
       }
       case "SpreadElement":
@@ -157,7 +147,7 @@ function transformAST(ast, debug = {}) {
         )})`;
         break;
       case "ChainExpression":
-        result = `${transformNode(node.expression)}`;
+        result = `(${transformNode(node.expression)})`;
         break;
       case "JSXFragment":
         indent++;
@@ -197,44 +187,17 @@ function transformAST(ast, debug = {}) {
         const discriminant = transformNode(node.discriminant);
         const cases = node.cases
           .map((caseNode) => {
-            const test = caseNode.test ? transformNode(caseNode.test) : "default";
+            const test = caseNode.test ? `case ${transformNode(caseNode.test)}` : "default";
             const consequent = caseNode.consequent
               .map(transformNode)
               .join("\n");
-            return `case ${test}:\n${consequent}`;
+            return `${test}:\n${consequent}`;
           })
           .join("\n");
         result = `switch (${discriminant}) {\n${cases}\n}`;
         break;
       case "ImportDeclaration":
-        const specifiers = node.specifiers
-          .map((specifier) => transformNode(specifier))
-          .filter(Boolean)
-          .join(", ");
-        const importSource = node.source ? `'${node.source.value}'` : "";
-        if (
-          node.specifiers.some(
-            (specifier) => specifier.type === "ImportDefaultSpecifier"
-          )
-        ) {
-          const defaultSpecifier = node.specifiers.find(
-            (specifier) => specifier.type === "ImportDefaultSpecifier"
-          );
-          if (node.specifiers.length > 1) {
-            const namedImports = node.specifiers
-              .filter((specifier) => specifier.type === "ImportSpecifier")
-              .map(transformNode)
-              .join(", ");
-            result = `import ${defaultSpecifier.local.name}, {${namedImports}} from ${importSource}`;
-          } else {
-            const localName = defaultSpecifier.local.name;
-            result = `import ${localName} from ${importSource}`;
-          }
-        } else if (specifiers) {
-          result = `import {${specifiers}} from ${importSource}`;
-        } else {
-          result = `import ${importSource}`;
-        }
+        result = getOriginalSource(node);
         break;
       case "FunctionDeclaration":
         const params = node.params
@@ -244,7 +207,7 @@ function transformAST(ast, debug = {}) {
         result = `function ${node.id.name}(${params}) ${body}`;
         break;
       case "AwaitExpression":
-        result = `await ${transformNode(node.argument)}`;
+        result = `(await ${transformNode(node.argument)})`;
         break;
       case "BlockStatement":
         indent++;
@@ -272,7 +235,12 @@ function transformAST(ast, debug = {}) {
         result = `(${testExprConditional} ? ${consequentExpr} : ${alternateExpr})`;
         break;
       case "ExportNamedDeclaration":
-        result = `export ${transformNode(node.declaration)}`;
+        result = node.declaration
+          ? `export ${transformNode(node.declaration)}`
+          : getOriginalSource(node);
+        break;
+      case "ExportAllDeclaration":
+        result = getOriginalSource(node);
         break;
       case "JSXElement": {
         indent++;
@@ -325,7 +293,7 @@ function transformAST(ast, debug = {}) {
         break;
       case "CallExpression":
         const args = node.arguments.map(transformNode).join(", ");
-        result = `${transformNode(node.callee)}${node.optional ? "?." : ""}(${args})`;
+        result = `(${transformNode(node.callee)}${node.optional ? "?." : ""}(${args}))`;
         break;
       case "ArrowFunctionExpression":
         const arrowParams = node.params
@@ -340,11 +308,11 @@ function transformAST(ast, debug = {}) {
               )};\n${getIndent()}}`;
         indent--;
         const asyncKeyword = node.async ? "async " : "";
-        result = `${asyncKeyword}(${arrowParams}) => ${arrowBody}`;
+        result = `(${asyncKeyword}(${arrowParams}) => ${arrowBody})`;
         break;
       case "ObjectExpression":
         const properties = node.properties.map(transformNode).join(", ");
-        result = `{${properties}}`;
+        result = `({${properties}})`;
         break;
       case "Property": {
         if (node.shorthand) {
@@ -388,8 +356,10 @@ function transformAST(ast, debug = {}) {
         result = `[${elements}]`;
         break;
       default:
-        console.log("Unhandled node:", node.type, node);
-        result = "";
+        throw new TypeError(
+          `Bundless AST transformer does not support ${node.type}` +
+          (Number.isInteger(node.start) ? ` at source offset ${node.start}.` : ".")
+        );
     }
 
     debug?.updatePosition?.(result, node);

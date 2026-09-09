@@ -7,6 +7,7 @@ import { transformAST } from './bundless.utils.ast.transpiler.js';
 window.Bundless = {
   ...window.Bundless,
   transformAST,
+  transformModuleSyntax,
   transpileCode,
   cache: true,
   to: 'react',
@@ -14,7 +15,7 @@ window.Bundless = {
 };
 
 let SMTools = {};
-async function transformJSX(code, filePath) {
+async function transformJSX(code, filePath, includeSourceMap = true) {
   const ast = meriyah.parse(code, {
     module: true,
     jsx: true,
@@ -32,7 +33,7 @@ async function transformJSX(code, filePath) {
   });
 
   // Update source mapper settings for this specific file
-  if (!window.Bundless.prod) {
+  if (includeSourceMap && !window.Bundless.prod) {
 
     const loadSourceMapTools = async () => {
       console.log('Loading Sucrase');
@@ -57,29 +58,29 @@ async function transformJSX(code, filePath) {
   }
 
   // return JSON.stringify(ast, null, 2);
-    const result = transformAST(ast, {
-      code, filePath, ...SMTools
-    });
-  let { code: transpiledCode, map } = result;
+  return transformAST(ast, {
+    code,
+    filePath,
+    ...(includeSourceMap ? SMTools : {}),
+  });
+}
+
+async function transformModuleSyntax(code, basePath, filename) {
+  const result = await transformJSX(code, basePath + filename, false);
+  return result.code;
+}
+
+async function transpileCode(code, basePath, filename) {
+  const { code: compiledCode, map } = await transformJSX(code, basePath + filename);
+  let transpiledCode = await handleImports(compiledCode, basePath, filename);
   if(window.Bundless.to === 'preact'){
     transpiledCode = toPreact(transpiledCode);
   }
   if(window.Bundless.prod){
-    return transpiledCode
+    return transpiledCode;
   }
-  else{
-    console.log('transformJSX:',  'map', result.map);
-    const sourceMapComment = `//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(map))}`;
-    return `${transpiledCode}\n${sourceMapComment}`;
-  }
-}
-
-async function transpileCode(code, basePath, filename) {
-  // console.log('Transpiler: Transpiling:', filename);
-  const processedCode = await handleImports(code, basePath, filename);
-  // console.log('Processed code: ', processedCode);
-  const transpiledCode = transformJSX(processedCode, basePath + filename);
-  return transpiledCode;
+  const sourceMapComment = `//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(map))}`;
+  return `${transpiledCode}\n${sourceMapComment}`;
 }
 
 runWhenDocumentReady(async () => {

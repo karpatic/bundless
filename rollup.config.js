@@ -1,4 +1,5 @@
 import replace from '@rollup/plugin-replace';
+import { nodeResolve } from '@rollup/plugin-node-resolve';
 import gzipPlugin from 'rollup-plugin-gzip';
 import { terser } from 'rollup-plugin-terser';
 
@@ -13,6 +14,7 @@ export default [
             inlineDynamicImports: true,
         },
         plugins: [
+            nodeResolve(),
             replace({
                 'window.Bundless.prod': JSON.stringify(false),
                 preventAssignment: true
@@ -33,6 +35,7 @@ export default [
             format: 'esm',
         },
         plugins: [
+            nodeResolve(),
             replace({
                 'window.Bundless.prod': JSON.stringify(true),
                 preventAssignment: true
@@ -53,6 +56,7 @@ export default [
             format: 'esm',
         },
         plugins: [
+            nodeResolve(),
             replace({
                 'window.Bundless.prod': JSON.stringify(true),
                 preventAssignment: true
@@ -74,6 +78,7 @@ export default [
             inlineDynamicImports: true,
         },
         plugins: [
+            nodeResolve(),
             replace({
                 'window.Bundless.prod': JSON.stringify(false),
                 preventAssignment: true
@@ -94,6 +99,7 @@ export default [
             format: 'esm',
         },
         plugins: [
+            nodeResolve(),
             replace({
                 'window.Bundless.prod': JSON.stringify(true),
                 preventAssignment: true
@@ -114,6 +120,7 @@ export default [
             format: 'esm',
         },
         plugins: [
+            nodeResolve(),
             replace({
                 'window.Bundless.prod': JSON.stringify(true),
                 preventAssignment: true
@@ -134,6 +141,7 @@ export default [
             format: 'esm',
         },
         plugins: [
+            nodeResolve(),
             gzipPlugin({
                 customCompression: content =>
                     require('zlib').brotliCompressSync(Buffer.from(content)),
@@ -149,6 +157,7 @@ export default [
             format: 'esm',
         },
         plugins: [
+            nodeResolve(),
             gzipPlugin({
                 customCompression: content =>
                     require('zlib').brotliCompressSync(Buffer.from(content)),

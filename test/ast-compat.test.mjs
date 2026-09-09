@@ -24,17 +24,30 @@ const parsers = [
   ['Meriyah', (code) => meriyah.parse(code, {
     jsx: true,
     module: true,
+    ranges: true,
     raw: true,
   })],
 ];
 
 function transpile(parse, code, debug) {
-  return transformAST(parse(code), debug).code;
+  return transformAST(parse(code), { ...debug, code }).code;
 }
 
 function execute(code, globals = {}) {
   const sandbox = { ...globals };
   new Function('globalThis', 'window', 'React', 'UI', code)(
+    sandbox,
+    globals.window,
+    globals.React,
+    globals.UI,
+  );
+  return sandbox;
+}
+
+async function executeAsync(code, globals = {}) {
+  const sandbox = { ...globals };
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+  await new AsyncFunction('globalThis', 'window', 'React', 'UI', code)(
     sandbox,
     globals.window,
     globals.React,
@@ -59,6 +72,73 @@ for (const [parserName, parse] of parsers) {
       conditional: 4,
       exponent: 64,
     });
+  });
+
+  test(`${parserName}: assignment expressions retain operand grouping`, () => {
+    const output = transpile(parse, `
+      let assigned = 0;
+      const value = (assigned = 1) + 2;
+      globalThis.result = { assigned, value };
+    `);
+
+    assert.deepEqual(execute(output).result, { assigned: 1, value: 3 });
+  });
+
+  test(`${parserName}: unary expressions remain valid exponentiation operands`, () => {
+    const output = transpile(parse, `
+      globalThis.result = (-2) ** 2;
+    `);
+
+    assert.equal(execute(output).result, 4);
+  });
+
+  test(`${parserName}: parenthesized optional chains retain their boundary`, () => {
+    const output = transpile(parse, `
+      const missing = null;
+      let threw = false;
+      try {
+        (missing?.value).nested;
+      } catch {
+        threw = true;
+      }
+      globalThis.result = threw;
+    `);
+
+    assert.equal(execute(output).result, true);
+  });
+
+  test(`${parserName}: arrow functions retain call and member boundaries`, () => {
+    const output = transpile(parse, `
+      const value = ((number) => number + 1)(2);
+      const arity = ((number) => number + 1).length;
+      globalThis.result = { value, arity };
+    `);
+
+    assert.deepEqual(execute(output).result, { value: 3, arity: 1 });
+  });
+
+  test(`${parserName}: await and called constructors retain operand boundaries`, async () => {
+    const output = transpile(parse, `
+      function factory() {
+        return Date;
+      }
+      const value = (await Promise.resolve({ value: 9 })).value;
+      const timestamp = new (factory())(0).getTime();
+      globalThis.result = { value, timestamp };
+    `);
+
+    assert.deepEqual((await executeAsync(output)).result, { value: 9, timestamp: 0 });
+  });
+
+  test(`${parserName}: update and object expressions retain member boundaries`, () => {
+    const output = transpile(parse, `
+      let count = 0;
+      const text = (++count).toString();
+      ({ value: globalThis.objectValue = 9 }).value;
+      globalThis.result = { count, text, objectValue: globalThis.objectValue };
+    `);
+
+    assert.deepEqual(execute(output).result, { count: 1, text: '1', objectValue: 9 });
   });
 
   test(`${parserName}: shorthand fragments and member JSX tags render`, () => {
@@ -128,7 +208,7 @@ for (const [parserName, parse] of parsers) {
     assert.deepEqual(execute(output).result, { objectResult: 5, arrayResult: 7 });
   });
 
-  test(`${parserName}: dynamic imports execute across the custom/native boundary`, () => {
+  test(`${parserName}: dynamic import syntax survives JSX compilation for loader routing`, () => {
     const output = transpile(
       parse,
       `
@@ -142,32 +222,17 @@ for (const [parserName, parse] of parsers) {
       `,
       { filePath: 'https://example.test/app/entry.jsx' },
     );
-    const calls = [];
-    const window = {
-      import(specifier) {
-        calls.push(['custom', specifier]);
-        return { route: 'custom', specifier };
-      },
-      Bundless: {
-        nativeImport(specifier) {
-          calls.push(['native', specifier]);
-          return { route: 'native', specifier };
-        },
-      },
-    };
+    assert.match(output, /import\("\.\/lazy\.jsx\?mode=test"\)/);
+    assert.match(output, /import\("webmidi"\)/);
+    assert.match(output, /import\("https:\/\/cdn\.example\/module\.js"\)/);
+    assert.match(output, /import\(nonliteralRelative\)/);
+  });
 
-    const { result } = execute(output, { window });
-
-    assert.deepEqual(calls, [
-      ['custom', 'https://example.test/app/lazy.jsx?mode=test'],
-      ['native', 'webmidi'],
-      ['native', 'https://cdn.example/module.js'],
-      ['native', './runtime-relative.jsx'],
-    ]);
-    assert.deepEqual(result, calls.map(([route, specifier]) => ({ route, specifier })));
-
-    // This proves nonliteral-relative dispatch only; the stub cannot establish
-    // how native ESM resolves that specifier after Bundless evaluates blob code.
+  test(`${parserName}: unsupported AST nodes fail loudly`, () => {
+    assert.throws(
+      () => transpile(parse, 'class Unsupported {}'),
+      /does not support ClassDeclaration/
+    );
   });
 
   test(`${parserName}: throw preserves an existing new expression`, () => {

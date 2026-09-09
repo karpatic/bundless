@@ -1,8 +1,10 @@
 // transpile.js
 
-const STATIC_IMPORT_PATTERN = /^([ \t]*)import\s+(?:(['"])([^'"]+)\2|(?:([\s\S]*?)\s+from\s*(['"])([^'"]+)\5))[ \t]*;?[ \t]*(?=\r?\n|$)/gm;
+import { init as initModuleLexer, parse as parseModuleSyntax } from "es-module-lexer";
+
 const LOCAL_MODULE_IMPORT_PATTERN = /^(?:\.{1,2}\/|\/)/;
 const MODULE_FILE_EXTENSION_PATTERN = /\.(?:mjs|jsx?|tsx?)$/i;
+const DYNAMIC_SOURCE_FILE_EXTENSION_PATTERN = /\.(?:jsx?|tsx?)$/i;
 const IDENTIFIER_PROPERTY_PATTERN = /^[A-Za-z_$][\w$]*$/;
 
 function splitImportSpecifiers(specifiers) {
@@ -81,6 +83,13 @@ function getModuleUrlBase(currentFilePath) {
   return new URL(normalizedBasePath, location.href);
 }
 
+function getModuleFileUrl(pathTo, filename) {
+  if (filename === "inline script") {
+    return new URL(location.href).href;
+  }
+  return new URL(filename, getModuleUrlBase(pathTo)).href;
+}
+
 function isTransformableLocalModuleImport(specifier) {
   if (!LOCAL_MODULE_IMPORT_PATTERN.test(specifier)) {
     return false;
@@ -99,6 +108,10 @@ function resolveLocalModuleImport(specifier, currentFilePath) {
     url.searchParams.set("cachebust", Date.now());
   }
   return url.href;
+}
+
+function resolveCallerRelativeSpecifier(specifier, importerUrl) {
+  return new URL(specifier, importerUrl || location.href).href;
 }
 
 function getModuleProperty(imported) {
@@ -132,6 +145,29 @@ function isPreactReactPackageImport(specifier) {
 
 function nativeImport(specifier) {
   return import(specifier);
+}
+
+function importFrom(specifier, importerUrl, options) {
+  if (options !== undefined) {
+    throw new SyntaxError(
+      "Bundless cannot route caller-relative dynamic imports with import attributes. " +
+      "Use a bare or absolute native import, or remove the attributes."
+    );
+  }
+  const moduleSpecifier = String(specifier);
+  if (!LOCAL_MODULE_IMPORT_PATTERN.test(moduleSpecifier)) {
+    return window.Bundless.nativeImport(moduleSpecifier);
+  }
+
+  const resolvedSpecifier = resolveCallerRelativeSpecifier(moduleSpecifier, importerUrl);
+  const sourcePath = resolvedSpecifier.split(/[?#]/)[0];
+  if (DYNAMIC_SOURCE_FILE_EXTENSION_PATTERN.test(sourcePath)) {
+    return window.import(resolvedSpecifier);
+  }
+
+  // .mjs and non-source resources retain native import() semantics. Resolving
+  // here prevents the generated blob URL from becoming their referrer base.
+  return window.Bundless.nativeImport(resolvedSpecifier);
 }
 
 // This transforms local static import statements into dynamic import expressions.
@@ -173,13 +209,6 @@ function getStaticImportTarget(specifier, currentFilePath, imports) {
     return {
       moduleImportExpression: `window.import(${JSON.stringify(moduleUrl)})`,
       modulePath: moduleUrl,
-    };
-  }
-
-  if (imports.defaultImport) {
-    return {
-      moduleImportExpression: `window.Bundless.nativeImport(${JSON.stringify(specifier)})`,
-      modulePath: specifier,
     };
   }
 
@@ -231,6 +260,7 @@ function isInImportMap(moduleName) {
 const moduleImportCache = new Map();
 const moduleSourceCache = new Map();
 const modulePreparedCodeCache = new Map();
+const moduleExportNamesCache = new Map();
 
 function normalizeModuleImportPath(path) {
   const modulePath = String(path);
@@ -242,10 +272,16 @@ function normalizeModuleImportPath(path) {
 }
 
 function splitModuleImportPath(normalizedPath) {
-  return {
-    basePath: normalizedPath.split("/").slice(0, -1).join("/") + "/",
-    filename: normalizedPath.split("/").slice(-1)[0],
-  };
+  try {
+    const url = new URL(normalizedPath, location.href);
+    const filename = url.pathname.split("/").pop() + url.search + url.hash;
+    return { basePath: new URL("./", url).href, filename };
+  } catch (error) {
+    return {
+      basePath: normalizedPath.split("/").slice(0, -1).join("/") + "/",
+      filename: normalizedPath.split("/").slice(-1)[0],
+    };
+  }
 }
 
 async function fetchModuleSource(normalizedPath) {
@@ -272,6 +308,91 @@ function getModuleSource(normalizedPath) {
   });
   moduleSourceCache.set(normalizedPath, sourcePromise);
   return sourcePromise;
+}
+
+async function parseCompiledModule(code, filename) {
+  await initModuleLexer;
+  return parseModuleSyntax(code, filename);
+}
+
+function isExportStarStatement(statement) {
+  return /^\s*export\s*\*(?!\s*as\b)\s*/.test(statement);
+}
+
+async function inspectModuleExportNames(normalizedPath, stack) {
+  if (stack.has(normalizedPath)) {
+    throw new SyntaxError(
+      `Bundless cannot expand an export-star cycle involving ${normalizedPath}. ` +
+      "Use explicit re-exports or a native ESM build for cyclic module graphs."
+    );
+  }
+
+  const nextStack = new Set(stack);
+  nextStack.add(normalizedPath);
+  const { code, basePath, filename } = await getModuleSource(normalizedPath);
+  if (typeof window.Bundless.transformModuleSyntax !== "function") {
+    throw new Error("Bundless compiler did not provide transformModuleSyntax().");
+  }
+  const compiledCode = await window.Bundless.transformModuleSyntax(
+    code,
+    basePath,
+    filename
+  );
+  const [imports, exports] = await parseCompiledModule(compiledCode, normalizedPath);
+  const directNames = new Set(exports.map((item) => item.n));
+  const starOrigins = new Map();
+
+  for (const moduleImport of imports) {
+    if (moduleImport.d !== -1 || !moduleImport.n) {
+      continue;
+    }
+    const statement = compiledCode.slice(moduleImport.ss, moduleImport.se);
+    if (!isExportStarStatement(statement)) {
+      continue;
+    }
+    if (!LOCAL_MODULE_IMPORT_PATTERN.test(moduleImport.n) ||
+        !isTransformableLocalModuleImport(moduleImport.n)) {
+      throw new SyntaxError(
+        `Bundless cannot statically expand export * from ${JSON.stringify(moduleImport.n)} ` +
+        `while preparing ${normalizedPath}. Use explicit re-exports for native or bare modules.`
+      );
+    }
+
+    const childPath = resolveLocalModuleImport(moduleImport.n, basePath);
+    const childNames = await getModuleExportNames(childPath, nextStack);
+    for (const name of childNames) {
+      if (name === "default" || directNames.has(name)) {
+        continue;
+      }
+      if (!starOrigins.has(name)) {
+        starOrigins.set(name, new Set());
+      }
+      starOrigins.get(name).add(childPath);
+    }
+  }
+
+  for (const [name, origins] of starOrigins) {
+    if (origins.size === 1) {
+      directNames.add(name);
+    }
+  }
+  return [...directNames];
+}
+
+function getModuleExportNames(normalizedPath, stack = new Set()) {
+  if (stack.has(normalizedPath)) {
+    return inspectModuleExportNames(normalizedPath, stack);
+  }
+  const cachedNames = moduleExportNamesCache.get(normalizedPath);
+  if (cachedNames) {
+    return cachedNames;
+  }
+  const namesPromise = inspectModuleExportNames(normalizedPath, stack).catch((error) => {
+    moduleExportNamesCache.delete(normalizedPath);
+    throw error;
+  });
+  moduleExportNamesCache.set(normalizedPath, namesPromise);
+  return namesPromise;
 }
 
 async function prepareModuleImport(normalizedPath) {
@@ -406,6 +527,7 @@ function runWhenDocumentReady(callback) {
 
 window.Bundless = {
   ...window.Bundless,
+  importFrom,
   nativeImport,
   prefetch: prefetchModules,
 };
@@ -446,6 +568,7 @@ window.import = function (path) {
     moduleImportCache.delete(normalizedPath);
     moduleSourceCache.delete(normalizedPath);
     modulePreparedCodeCache.delete(normalizedPath);
+    moduleExportNamesCache.delete(normalizedPath);
     throw error;
   });
   moduleImportCache.set(normalizedPath, importPromise);
@@ -453,36 +576,212 @@ window.import = function (path) {
 };
 
 
-// Calls convertImports on static imports
+function applyModuleReplacements(code, replacements) {
+  return replacements
+    .sort((left, right) => right.start - left.start)
+    .reduce(
+      (result, replacement) =>
+        result.slice(0, replacement.start) + replacement.code + result.slice(replacement.end),
+      code
+    );
+}
+
+function getStaticImportClause(code, moduleImport) {
+  const prefix = code.slice(moduleImport.ss + "import".length, moduleImport.s - 1).trim();
+  if (!prefix) {
+    return "";
+  }
+  const fromMatch = prefix.match(/^([\s\S]*?)\s+from\s*$/);
+  if (!fromMatch) {
+    throw new SyntaxError(`Bundless could not parse static import: ${code.slice(moduleImport.ss, moduleImport.se)}`);
+  }
+  return fromMatch[1].trim();
+}
+
+function formatExportName(name) {
+  return IDENTIFIER_PROPERTY_PATTERN.test(name) ? name : JSON.stringify(name);
+}
+
+function getRequiredExportValue(moduleExpression, imported, modulePath) {
+  const importName = JSON.stringify(imported);
+  const importPath = JSON.stringify(modulePath);
+  return `((mod) => { if (!Object.prototype.hasOwnProperty.call(mod, ${importName})) { throw new SyntaxError("The requested module " + ${importPath} + " does not provide an export named " + ${importName} + "."); } return mod${getModuleProperty(imported)}; })(${moduleExpression})`;
+}
+
+function transformNamedReexport(statement, moduleUrl, index) {
+  const clauseMatch = statement.match(/^\s*export\s*\{([\s\S]*?)\}\s*from\b/);
+  if (!clauseMatch) {
+    throw new SyntaxError(`Bundless could not parse named re-export: ${statement}`);
+  }
+  const specifiers = parseNamedImportSpecifiers(clauseMatch[1]);
+  const namespaceName = `__bundless_reexport_${index}`;
+  const declarations = [`const ${namespaceName} = await window.import(${JSON.stringify(moduleUrl)});`];
+  const exports = [];
+
+  specifiers.forEach(({ imported, local: exported }, specifierIndex) => {
+    const bindingName = `${namespaceName}_${specifierIndex}`;
+    declarations.push(
+      `const ${bindingName} = ${getRequiredExportValue(namespaceName, imported, moduleUrl)};`
+    );
+    exports.push(`${bindingName} as ${formatExportName(exported)}`);
+  });
+  declarations.push(`export { ${exports.join(", ")} };`);
+  return declarations.join(" ");
+}
+
+function transformNamespaceReexport(statement, moduleUrl, index) {
+  const namespaceMatch = statement.match(/^\s*export\s*\*\s*as\s*([^\s]+)\s*from\b/);
+  if (!namespaceMatch) {
+    throw new SyntaxError(`Bundless could not parse namespace re-export: ${statement}`);
+  }
+  const bindingName = `__bundless_reexport_namespace_${index}`;
+  return `const ${bindingName} = await window.import(${JSON.stringify(moduleUrl)}); export { ${bindingName} as ${formatExportName(normalizeImportName(namespaceMatch[1]))} };`;
+}
+
+function transformStarReexport(moduleUrl, names, index) {
+  const namespaceName = `__bundless_reexport_star_${index}`;
+  const declarations = [`const ${namespaceName} = await window.import(${JSON.stringify(moduleUrl)});`];
+  const exports = [];
+  names.forEach((name, nameIndex) => {
+    const bindingName = `${namespaceName}_${nameIndex}`;
+    declarations.push(
+      `const ${bindingName} = ${getRequiredExportValue(namespaceName, name, moduleUrl)};`
+    );
+    exports.push(`${bindingName} as ${formatExportName(name)}`);
+  });
+  if (exports.length > 0) {
+    declarations.push(`export { ${exports.join(", ")} };`);
+  }
+  return declarations.join(" ");
+}
+
+function transformDynamicImport(code, moduleImport, importerUrl) {
+  if (moduleImport.n && !LOCAL_MODULE_IMPORT_PATTERN.test(moduleImport.n)) {
+    return false;
+  }
+  if (moduleImport.a !== -1) {
+    throw new SyntaxError(
+      `Bundless cannot route caller-relative dynamic imports with import attributes: ${code.slice(moduleImport.ss, moduleImport.se)}`
+    );
+  }
+  const argumentsSource = code.slice(moduleImport.d + 1, moduleImport.se - 1);
+  return `window.Bundless.importFrom(${argumentsSource}, ${JSON.stringify(importerUrl)})`;
+}
+
+// Rewrites module syntax only after JSX/TypeScript compilation. es-module-lexer
+// prevents import() expressions, comments, strings, and re-exports from being
+// mistaken for one another.
 async function handleImports(code, pathTo, filename) {
-  if (!code.includes("import")) {return code;}
+  if (!code.includes("import") && !code.includes("export")) {return code;}
+  const importerUrl = getModuleFileUrl(pathTo, filename);
+  const [moduleImports, exports] = await parseCompiledModule(code, importerUrl);
   const importState = {
     importedLocals: new Set(),
   };
+  const replacements = [];
+  const explicitExportNames = new Set(exports.map((item) => item.n));
+  const localStarEntries = [];
 
-  return code.replace(
-    STATIC_IMPORT_PATTERN,
-    (statement, indentation, sideEffectQuote, sideEffectSpecifier, importClause, fromQuote, fromSpecifier) => {
-      const specifier = sideEffectSpecifier || fromSpecifier;
-      const imports = parseImportClause(importClause);
-      if (imports.typeOnly) {
-        return "";
+  for (const [index, moduleImport] of moduleImports.entries()) {
+    if (moduleImport.d !== -1 || !moduleImport.n) {
+      continue;
+    }
+    const statement = code.slice(moduleImport.ss, moduleImport.se);
+    if (isExportStarStatement(statement) &&
+        LOCAL_MODULE_IMPORT_PATTERN.test(moduleImport.n) &&
+        isTransformableLocalModuleImport(moduleImport.n)) {
+      const moduleUrl = resolveLocalModuleImport(moduleImport.n, pathTo);
+      localStarEntries.push({ index, moduleImport, moduleUrl });
+    }
+  }
+
+  const starNameOrigins = new Map();
+  const starNameOwners = new Map();
+  await Promise.all(localStarEntries.map(async (entry) => {
+    entry.names = (await getModuleExportNames(entry.moduleUrl))
+      .filter((name) => name !== "default" && !explicitExportNames.has(name));
+    for (const name of entry.names) {
+      if (!starNameOrigins.has(name)) {
+        starNameOrigins.set(name, new Set());
+        starNameOwners.set(name, entry.moduleImport.ss);
       }
+      starNameOrigins.get(name).add(entry.moduleUrl);
+    }
+  }));
+  const starEntryByStart = new Map(localStarEntries.map((entry) => [entry.moduleImport.ss, entry]));
 
-      const importTarget = getStaticImportTarget(specifier, pathTo, imports);
-      if (!importTarget) {
-        return statement;
+  for (const [index, moduleImport] of moduleImports.entries()) {
+    if (moduleImport.d !== -1) {
+      if (moduleImport.d >= 0) {
+        const replacement = transformDynamicImport(code, moduleImport, importerUrl);
+        if (replacement) {
+          replacements.push({ start: moduleImport.ss, end: moduleImport.se, code: replacement });
+        }
       }
+      continue;
+    }
+    if (!moduleImport.n) {
+      continue;
+    }
 
-      return `${indentation}${transformStaticImportsToDynamic(
+    const statement = code.slice(moduleImport.ss, moduleImport.se);
+    const isReexport = /^\s*export\b/.test(statement);
+    if (isPreactReactPackageImport(moduleImport.n) && !isReexport) {
+      replacements.push({ start: moduleImport.ss, end: moduleImport.se, code: "" });
+      continue;
+    }
+    if (!LOCAL_MODULE_IMPORT_PATTERN.test(moduleImport.n)) {
+      continue;
+    }
+
+    const moduleUrl = resolveLocalModuleImport(moduleImport.n, pathTo);
+    if (!isTransformableLocalModuleImport(moduleImport.n)) {
+      replacements.push({ start: moduleImport.s, end: moduleImport.e, code: moduleUrl });
+      continue;
+    }
+    if (moduleImport.a !== -1) {
+      throw new SyntaxError(
+        `Bundless custom source imports do not support import attributes: ${statement}`
+      );
+    }
+
+    if (isReexport) {
+      const starEntry = starEntryByStart.get(moduleImport.ss);
+      let replacement;
+      if (starEntry) {
+        const unambiguousNames = starEntry.names.filter((name) =>
+          starNameOrigins.get(name).size === 1 &&
+          starNameOwners.get(name) === moduleImport.ss
+        );
+        replacement = transformStarReexport(moduleUrl, unambiguousNames, index);
+      } else if (/^\s*export\s*\*\s*as\b/.test(statement)) {
+        replacement = transformNamespaceReexport(statement, moduleUrl, index);
+      } else if (/^\s*export\s*\{/.test(statement)) {
+        replacement = transformNamedReexport(statement, moduleUrl, index);
+      } else {
+        throw new SyntaxError(`Bundless does not support this local re-export form: ${statement}`);
+      }
+      replacements.push({ start: moduleImport.ss, end: moduleImport.se, code: replacement });
+      continue;
+    }
+
+    const importClause = getStaticImportClause(code, moduleImport);
+    const imports = parseImportClause(importClause);
+    const importTarget = getStaticImportTarget(moduleImport.n, pathTo, imports);
+    replacements.push({
+      start: moduleImport.ss,
+      end: moduleImport.se,
+      code: transformStaticImportsToDynamic(
         importClause,
         imports,
         importTarget.moduleImportExpression,
         importTarget.modulePath,
         importState
-      )}`;
-    }
-  );
+      ),
+    });
+  }
+
+  return applyModuleReplacements(code, replacements);
 }
 
 function toPreact(code){
@@ -499,15 +798,6 @@ function toPreact(code){
     code = code.replace(/React.useMemo/g, "useMemo"); // useContext, useMemo
     code = code.replace(/React.Fragment/g, "Fragment");
 
-    code = code.replace(
-      STATIC_IMPORT_PATTERN,
-      (statement, indentation, sideEffectQuote, sideEffectSpecifier, importClause, fromQuote, fromSpecifier) => {
-        if (fromSpecifier && isPreactReactPackageImport(fromSpecifier)) {
-          return "";
-        }
-        return statement;
-      }
-    );
     code = prefix + code;
   }
   return code;

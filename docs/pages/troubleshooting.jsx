@@ -96,9 +96,10 @@ export default function TroubleshootingPage() {
       <h2>Source maps or startup are too large</h2>
       <p>
         For Acorn or Meriyah, use <code>.min.js</code> or <code>.prod.js</code> to omit inline runtime
-        source maps. Use <code>.dev.js</code> only when you need those maps. Babel and Sucrase keep
-        their own inline source-map behavior. If parser download or browser transformation is too
-        costly, move compilation to a build.
+        source maps. Use <code>.dev.js</code> only when you need those maps. The Babel build requests
+        a source map from Babel Standalone and appends it inline; the Sucrase build generates and
+        appends its source map inline. If parser download or browser transformation is too costly,
+        move compilation to a build.
       </p>
 
       <Callout title="Check production limits before release">

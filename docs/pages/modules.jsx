@@ -60,6 +60,8 @@ export default function ModulesPage() {
         A default import uses the module <code>default</code> export. If there is no default export,
         Bundless uses the module namespace for that binding. Named imports must match named exports.
         Namespace imports remain namespaces. A side-effect import only loads and runs the module.
+        Local named, default, namespace, and export-star re-exports use the same loader and may keep
+        query strings in their paths.
       </p>
 
       <h2>Load a module after startup</h2>
@@ -69,6 +71,21 @@ export default function ModulesPage() {
         fetches the source, transforms it, evaluates a temporary <code>blob:</code> module, and
         resolves to the module namespace.
       </p>
+      <p>
+        In transformed code, relative dynamic imports of <code>.js</code>, <code>.jsx</code>,
+        <code>.ts</code>, and <code>.tsx</code> source use that loader. Relative <code>.mjs</code>
+        imports stay native. Both resolve from the original source file instead of the temporary
+        blob URL. Bare dynamic imports stay native and use the page import map.
+      </p>
+
+      <Callout title="Custom-loader bindings are snapshots">
+        <p>
+          Transformed local imports and re-exports capture values when the module evaluates. They
+          do not implement live ESM bindings or cyclic custom-loader graphs. Export-star expansion
+          through a native or bare module is also unsupported. Use explicit exports or a native or
+          build-time ESM graph when those semantics matter.
+        </p>
+      </Callout>
 
       <h2>Understand the cache</h2>
       <ul>
