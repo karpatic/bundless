@@ -115,7 +115,7 @@ function renderPage() {
       <section class="benchmark-note benchmark-methodology">
         <div><h2>Methodology</h2>
           <p>${runsPerExample} run${runsPerExample === 1 ? "" : "s"} per demo in randomized order. The table reports the median validated app-ready time. Each HTML navigation gets a unique query, while stable subresource URLs may use the browser’s normal HTTP cache; later runs are therefore warm-cache influenced. The runner itself is plain JavaScript and does not preload React, Preact, or Bundless.</p>
-          <p>Payload values are labeled historical estimates: decimal kB (1 kB = 1,000 bytes) of compressed production JavaScript expected by that demo, excluding HTML, application data, the shared readiness probe, and any bytes already cached. They are not live transfer measurements.</p></div>
+          <p>Payload values are labeled historical estimates: decimal kB (1 kB = 1,000 bytes) of compressed production JavaScript expected by that demo, excluding HTML, application data, the shared readiness probe, and any bytes already cached. They predate the browser footprint refactor and are not current runtime sizes or live transfer measurements. See the <a href="/docs/reference/runtimes.html">runtime reference</a> for current local artifact scope.</p></div>
         <div class="docs-demo-links"><button class="docs-button-link" id="run-benchmarks" type="button">Run again</button><a class="docs-button-link secondary" href="/playground.html">Open playground</a></div>
       </section>
       ${groupMarkup}

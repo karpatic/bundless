@@ -3,6 +3,10 @@
 This file is the no-runtime fallback for the browser-rendered documentation on
 [bundless.dev](https://bundless.dev/usage.html).
 
+The browser footprint refactor is local and unreleased; the package version
+remains `1.0.12`. The pinned npm/CDN examples below do not promise those local
+changes are already published.
+
 ## Fresh-folder starter
 
 ```sh
@@ -86,7 +90,7 @@ If a CDN dependency is acceptable, the local runtime tag can be replaced with:
 
 - Acorn is the recommended JSX default. `bundless.acorn.dev.js` includes inline
   runtime source maps. `bundless.acorn.min.js` and the explicit `.prod.js` build
-  omit those maps.
+  omit those maps and are byte-identical, minified builds.
 - Meriyah is the alternate JSX parser and follows the same dev-versus-production
   source-map distinction.
 - Sucrase handles JSX, TypeScript, and TSX. It removes TypeScript syntax but does
@@ -95,9 +99,24 @@ If a CDN dependency is acceptable, the local runtime tag can be replaced with:
 - Babel uses Babel Standalone. Its single browser build requests a source map
   from Babel Standalone and appends it inline.
 
-The checked-in Brotli runtime files are about 44.6 KiB for the default Acorn
-runtime and 60.0 KiB for Sucrase. Those values are measured binary KiB for the
-runtime file only; React and application code are outside that scope.
+The local default Acorn runtime is about 35.1 kB with Brotli; Sucrase is about
+56.4 kB (decimal kB = 1,000 bytes). These download sizes apply only when the
+server serves Brotli with `Content-Encoding: br`. See the canonical
+[browser footprint table](README.MD#browser-footprint) for raw sizes, other
+variants, and the full npm package size. React, application code, and external
+dependencies are additional; the Babel wrapper excludes Babel Standalone.
+
+Acorn/Meriyah reuse one AST per compilation for module metadata and JSX edits,
+preserving ordinary JavaScript source instead of regenerating the whole program.
+Their parsers remain bundled; the separate module lexer and WASM payload are gone.
+Babel/Sucrase retain their compiler-plus-lexer path. All default `.min.js` files
+are minified. Acorn/Meriyah dev maps describe the final transformed source;
+Babel/Sucrase compiler maps are not composed through subsequent loader rewrites.
+
+Source preservation does not downlevel JavaScript for older browsers. Syntax
+must be accepted by the selected parser and run in the target browser. Meriyah
+still rejects trailing commas in dynamic imports and retains entity spellings
+in quoted JSX attributes; Acorn decodes those attribute entities.
 
 ## Modules and cache
 
@@ -119,6 +138,8 @@ The custom loader exposes snapshot bindings: later mutations of an exported bind
 do not propagate through transformed imports or re-exports. Cyclic custom-loader
 graphs and export-star expansion through native or bare modules are not supported;
 use explicit exports or a native/build-time ESM graph when those semantics matter.
+Import attributes are unsupported on custom source imports and caller-relative
+dynamic imports.
 
 ## More guides
 

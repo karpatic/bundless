@@ -83,7 +83,8 @@ export default function ModulesPage() {
           Transformed local imports and re-exports capture values when the module evaluates. They
           do not implement live ESM bindings or cyclic custom-loader graphs. Export-star expansion
           through a native or bare module is also unsupported. Use explicit exports or a native or
-          build-time ESM graph when those semantics matter.
+          build-time ESM graph when those semantics matter. Import attributes are unsupported on
+          custom source imports and caller-relative dynamic imports.
         </p>
       </Callout>
 

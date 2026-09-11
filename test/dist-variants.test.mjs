@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { brotliDecompressSync } from 'node:zlib';
+import { rollup } from 'rollup';
+import { nodeResolve } from '@rollup/plugin-node-resolve';
+import docsReact from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import test from 'node:test';
 
 import { transformSync as babelTransform } from '@babel/core';
@@ -36,7 +41,7 @@ function installBabelStandaloneShim() {
   };
 }
 
-async function loadVariant({ file, babel }) {
+async function loadVariant({ file, babel }, instance = file) {
   const source = await readFile(new URL(`../dist/${file}`, import.meta.url), 'utf8');
   const calls = { fetch: [], objectUrls: [], revokedUrls: [] };
   const sources = new Map();
@@ -48,7 +53,7 @@ async function loadVariant({ file, babel }) {
   }
   class TestURL extends URL {}
   TestURL.createObjectURL = (blob) => {
-    const url = `data:text/javascript;base64,${Buffer.from(blob.source).toString('base64')}#${file}-module-${calls.objectUrls.length}`;
+    const url = `data:text/javascript;base64,${Buffer.from(blob.source).toString('base64')}#${instance}-module-${calls.objectUrls.length}`;
     calls.objectUrls.push(url);
     return url;
   };
@@ -87,7 +92,7 @@ async function loadVariant({ file, babel }) {
   const originalWarn = console.warn;
   console.warn = () => {};
   try {
-    await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}#artifact-${file}`);
+    await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}#artifact-${instance}`);
   } finally {
     console.warn = originalWarn;
   }
@@ -261,3 +266,70 @@ for (const variant of variants) {
     assert.equal(calls.objectUrls.length, calls.revokedUrls.length);
   });
 }
+
+// Check graph membership without writing or rebuilding checked-in artifacts.
+test('browser compiler graphs keep the module lexer exclusive to Babel/Sucrase', async () => {
+  for (const backend of ['acorn', 'meriyah', 'babel', 'sucrase']) {
+    const bundle = await rollup({
+      input: new URL(`../src/bundless.${backend}.js`, import.meta.url).pathname,
+      plugins: [nodeResolve()],
+    });
+    try {
+      const hasLexer = bundle.cache.modules.some(({ id }) => id.includes('/es-module-lexer/'));
+      assert.equal(hasLexer, backend === 'babel' || backend === 'sucrase', backend);
+    } finally {
+      await bundle.close();
+    }
+  }
+  for (const { file } of variants.filter(({ file }) => /acorn|meriyah/.test(file))) {
+    const source = await readFile(new URL(`../dist/${file}`, import.meta.url), 'utf8');
+    assert.doesNotMatch(source, /WebAssembly|AGFzbQE/, `${file}: no WASM API or encoded header`);
+  }
+});
+
+test('Acorn/Meriyah min and prod aliases are byte-identical', async () => {
+  for (const backend of ['acorn', 'meriyah']) {
+    for (const extension of ['js', 'js.br']) {
+      const [min, prod] = await Promise.all(['min', 'prod'].map(variant =>
+        readFile(new URL(`../dist/bundless.${backend}.${variant}.${extension}`, import.meta.url))));
+      assert.deepEqual(min, prod, `${backend}.${extension}`);
+    }
+  }
+});
+
+test('every browser Brotli companion decompresses to its JavaScript artifact', async () => {
+  for (const { file } of variants) {
+    const [source, compressed] = await Promise.all([file, `${file}.br`].map(name =>
+      readFile(new URL(`../dist/${name}`, import.meta.url))));
+    assert.deepEqual(brotliDecompressSync(compressed), source, file);
+  }
+});
+
+test('default Acorn compiles and renders the runtime and module documentation', async () => {
+  const { sources, window } = await loadVariant(variants.find(({ file }) => file === 'bundless.acorn.min.js'), 'docs');
+  // Use the installed React for a local render; no CDN/Standalone fetch is involved.
+  globalThis.__bundlessDocsReact = docsReact;
+  const reactModule = `data:text/javascript,export default globalThis.__bundlessDocsReact`;
+  try {
+    for (const file of ['App.jsx', 'content.js', 'pages/runtimes.jsx', 'pages/modules.jsx']) {
+      const source = await readFile(new URL(`../docs/${file}`, import.meta.url), 'utf8');
+      sources.set(`https://example.test/docs/${file}`, source.replace('from "react"', `from "${reactModule}"`));
+    }
+    const { default: RuntimesPage } = await window.import('https://example.test/docs/pages/runtimes.jsx');
+    const html = renderToStaticMarkup(docsReact.createElement(RuntimesPage));
+    assert.match(html, /What changed inside/);
+    assert.match(html, /separate module lexer/);
+    assert.match(html, /Content-Encoding: br/);
+    assert.match(html, /unreleased/);
+    assert.match(html, /README.MD#browser-footprint/);
+    assert.match(html, /table<\/a> in this checkout/);
+    assert.match(html, /All default <code>\.min\.js<\/code> paths/);
+    assert.match(html, /byte-identical and minified/);
+    const { default: ModulesPage } = await window.import('https://example.test/docs/pages/modules.jsx');
+    const modules = renderToStaticMarkup(docsReact.createElement(ModulesPage));
+    assert.match(modules, /Custom-loader bindings are snapshots/);
+    assert.match(modules, /Import attributes are unsupported/);
+  } finally {
+    delete globalThis.__bundlessDocsReact;
+  }
+});
