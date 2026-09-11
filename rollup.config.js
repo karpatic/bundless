@@ -40,6 +40,7 @@ export default [
                 'window.Bundless.prod': JSON.stringify(true),
                 preventAssignment: true
             }),
+            terser({ numWorkers: 2 }),
             gzipPlugin({
                 customCompression: content =>
                     require('zlib').brotliCompressSync(Buffer.from(content)),
@@ -61,7 +62,7 @@ export default [
                 'window.Bundless.prod': JSON.stringify(true),
                 preventAssignment: true
             }),
-            terser(),
+            terser({ numWorkers: 2 }),
             gzipPlugin({
                 customCompression: content =>
                     require('zlib').brotliCompressSync(Buffer.from(content)),
@@ -104,6 +105,7 @@ export default [
                 'window.Bundless.prod': JSON.stringify(true),
                 preventAssignment: true
             }),
+            terser({ numWorkers: 2 }),
             gzipPlugin({
                 customCompression: content =>
                     require('zlib').brotliCompressSync(Buffer.from(content)),
@@ -125,7 +127,7 @@ export default [
                 'window.Bundless.prod': JSON.stringify(true),
                 preventAssignment: true
             }),
-            terser(),
+            terser({ numWorkers: 2 }),
             gzipPlugin({
                 customCompression: content =>
                     require('zlib').brotliCompressSync(Buffer.from(content)),
@@ -158,6 +160,7 @@ export default [
         },
         plugins: [
             nodeResolve(),
+            terser({ numWorkers: 2 }),
             gzipPlugin({
                 customCompression: content =>
                     require('zlib').brotliCompressSync(Buffer.from(content)),
