@@ -228,11 +228,9 @@ for (const [parserName, parse] of parsers) {
     assert.match(output, /import\(nonliteralRelative\)/);
   });
 
-  test(`${parserName}: unsupported AST nodes fail loudly`, () => {
-    assert.throws(
-      () => transpile(parse, 'class Unsupported {}'),
-      /does not support ClassDeclaration/
-    );
+  test(`${parserName}: ordinary syntax outside the old emitter is copied verbatim`, () => {
+    const source = 'class Preserved { method() { return (1 + 2) * 3; } }';
+    assert.equal(transpile(parse, source), source);
   });
 
   test(`${parserName}: throw preserves an existing new expression`, () => {
@@ -246,4 +244,56 @@ for (const [parserName, parse] of parsers) {
     assert.throws(() => execute(output), { name: 'Error', message: 'boom' });
     assert.doesNotMatch(output, /throw new new/);
   });
+  test(`${parserName}: ASI, comments, strings and templates retain original source`, () => {
+    const source = `
+      function empty() { return
+        { unreachable: true };
+      }
+      // import('./fake.jsx'); <Fake />
+      const text = "export * from './fake.js'; <Fake />";
+      const template = \`raw <Fake /> \${(1 + 2) * 3}\`;
+      globalThis.result = [empty(), text, template];
+    `;
+    assert.equal(transpile(parse, source), source);
+    assert.deepEqual(execute(transpile(parse, source)).result, [
+      undefined, "export * from './fake.js'; <Fake />", 'raw <Fake /> 9',
+    ]);
+  });
+
+  test(`${parserName}: nested JSX expressions, entities and sequence arguments survive ranges`, () => {
+    const React = { createElement: (tag, props, ...children) => ({ tag, props, children }) };
+    const output = transpile(parse, `
+      globalThis.result = <div title="A &amp; B" data-value={(0, { default: 3 })}>
+        A &amp; B
+        {true ? <span>{((x) => <b>{x}</b>)(2)}</span> : null}
+        {\`prefix \${<i />}\`}
+        { /* omitted */ }
+      </div>;
+    `);
+    const result = execute(output, { React }).result;
+    // Meriyah leaves attribute entities literal; both parsers decode JSX text.
+    const entityText = parserName === 'Meriyah' ? 'A &amp; B' : 'A & B';
+    assert.equal(result.props.title, entityText);
+    assert.deepEqual(result.props['data-value'], { default: 3 });
+    assert.equal(result.children[0], 'A & B');
+    assert.equal(result.children[1].children[0].children[0], 2);
+    assert.equal(result.children[2], 'prefix [object Object]');
+  });
+
+  test(`${parserName}: compact JSX retains keyword token boundaries`, () => {
+    const React = { createElement: (tag, props, ...children) => ({ tag, props, children }) };
+    const output = transpile(parse, 'function view(){return<div/>} globalThis.result = [view(), typeof<div/>];');
+    const result = execute(output, { React }).result;
+    assert.equal(result[0].tag, 'div');
+    assert.equal(result[1], 'object');
+  });
+
+  test(`${parserName}: Preact edits preserve fragments and literal React text`, () => {
+    const source = 'const text = "React.useState"; const view = <React.Fragment>{React.useState(1)}</React.Fragment>;';
+    const output = transpile(parse, source, { preact: true });
+    assert.match(output, /h\(Fragment/);
+    assert.match(output, /\(useState\(1\)\)/);
+    assert.match(output, /"React.useState"/);
+  });
+
 }

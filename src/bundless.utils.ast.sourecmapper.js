@@ -1,82 +1,31 @@
-// Position tracking variables
-let generatedCode = "";
-let currentLine = 1;
-let currentColumn = 0;
-
-// Export function that initializes source mapping
-export function initSourceMapper(debug) {
-  if (!debug) {
-    return { map: null, updatePosition: () => {} };
-  }
-  
-  const sourceFilename = debug.sourceFilename;
-  const sourceCode = debug.sourceCode;
-  const GenMapping = debug.GenMapping;
-  const maybeAddSegment = debug.maybeAddSegment;
-  
-  // Create source map if GenMapping is available
-  const map = GenMapping ? new GenMapping({ file: sourceFilename }) : null;
-  
-  // Helper function to calculate line and column from offset
-  function getLineAndColumnFromOffset(offset) {
-    if (!sourceCode) return { line: 1, column: 0 };
-    
-    const lines = sourceCode.split('\n');
-    let currentOffset = 0;
-  
-    for (let i = 0; i < lines.length; i++) {
-      const lineLength = lines[i].length + 1; // +1 for the newline character
-      if (currentOffset + lineLength > offset) {
-        return { line: i + 1, column: offset - currentOffset };
-      }
-      currentOffset += lineLength;
+// Each compilation owns its generated position, including final module edits.
+export function initSourceMapper({ GenMapping, maybeAddSegment, sourceFilename, sourceCode }) {
+  const map = new GenMapping({ file: sourceFilename });
+  const lines = [0];
+  for (let i = 0; i < sourceCode.length; i++) if (sourceCode[i] === '\n') lines.push(i + 1);
+  let generatedLine = 0, generatedColumn = 0;
+  function updatePosition(text, node, original = false) {
+    let offset = node.start;
+    // Binary search also works when JSX emission revisits an earlier offset.
+    let low = 0, high = lines.length;
+    while (low + 1 < high) {
+      const mid = (low + high) >>> 1;
+      if (lines[mid] <= offset) low = mid;
+      else high = mid;
     }
-  
-    return { line: lines.length, column: 0 }; // Fallback
-  }
-
-  // Helper to update position counters and add mappings
-  function updatePosition(str, originalNode = null) {
-    if (!str) return;
-    
-    const startColumn = currentColumn;
-    
-    for (let i = 0; i < str.length; i++) {
-      if (str[i] === '\n') {
-        currentLine++;
-        currentColumn = 0;
-      } else {
-        currentColumn++;
+    let line = low, column = offset - lines[low];
+    for (let i = 0; i < text.length; i++) {
+      // Keep exact columns in preserved source; synthetic code anchors to its node.
+      if (original || i === 0 || generatedColumn === 0) {
+        maybeAddSegment(map, generatedLine, generatedColumn, sourceFilename, line, column);
+      }
+      if (text[i] === '\n') { generatedLine++; generatedColumn = 0; }
+      else generatedColumn++;
+      if (original) {
+        if (text[i] === '\n') { line++; column = 0; }
+        else column++;
       }
     }
-    
-    if (originalNode && typeof originalNode.start === 'number' && maybeAddSegment && map) {
-      const startPosition = getLineAndColumnFromOffset(originalNode.start);
-      maybeAddSegment(
-        map,
-        currentLine - 1,
-        startColumn,
-        sourceFilename,
-        startPosition.line - 1,
-        startPosition.column
-      );
-    }
-    
-    generatedCode += str;
   }
-
   return { map, updatePosition };
-}
-
-// Initialize with default empty implementations that will be overridden when initSourceMapper is called
-let activeMapper = { map: null, updatePosition: () => {} };
-
-// Export the current active mapper functions for direct import
-export const updatePosition = (str, originalNode) => activeMapper.updatePosition(str, originalNode);
-export const getMap = () => activeMapper.map;
-
-// Export a function to set the active mapper
-export function setActiveMapper(mapper) {
-  activeMapper = mapper;
-  return activeMapper;
 }

@@ -94,6 +94,96 @@ async function loadVariant({ file, babel }) {
   return { calls, sources, window: globalThis.window };
 }
 
+
+async function probeModuleSeams({ window, sources }, extension) {
+  sources.set(`https://example.test/app/no-default.${extension}`, 'export const value = 17;');
+  sources.set(`https://example.test/app/interop.${extension}`, `import fallback from './no-default.${extension}'; export const value = fallback.value;`);
+  assert.equal((await window.import(`./interop.${extension}`)).value, 17);
+  sources.set(`https://example.test/app/missing.${extension}`, `import { absent } from './no-default.${extension}'; export { absent };`);
+  await assert.rejects(window.import(`./missing.${extension}`), /does not provide an export named absent/);
+  sources.set(`https://example.test/app/missing-reexport.${extension}`, `export { absent } from './no-default.${extension}';`);
+  await assert.rejects(window.import(`./missing-reexport.${extension}`), /does not provide an export named absent/);
+  sources.set(`https://example.test/app/star-a.${extension}`, 'export const collision = 1; export const onlyA = 2;');
+  sources.set(`https://example.test/app/star-b.${extension}`, 'export const collision = 3; export const onlyB = 4;');
+  sources.set(`https://example.test/app/stars.${extension}`, `export * from './star-a.${extension}'; export * from './star-b.${extension}';`);
+  const stars = await window.import(`./stars.${extension}`);
+  assert.deepEqual(Object.keys(stars), ['onlyA', 'onlyB']);
+  sources.set(`https://example.test/app/cycle-a.${extension}`, `export * from './cycle-b.${extension}';`);
+  sources.set(`https://example.test/app/cycle-b.${extension}`, `export * from './cycle-a.${extension}';`);
+  await assert.rejects(window.import(`./cycle-a.${extension}`), /export-star cycle/);
+}
+
+async function probeASTRanges({ window, sources }, variant) {
+  sources.set('https://example.test/app/quoted.js?v=q', `const value = 23; export { value as "a,b as c", value as "default" };`);
+  sources.set('https://example.test/app/quoted-barrel.js', `
+    export /* keep clause comments legal */ { "a,b as c" as "renamed value" } from './quoted.js?v=q';
+    export * as "quoted namespace" from './quoted.js?v=q';
+  `);
+  sources.set('https://example.test/app/range.jsx?v=entry', `
+    import /* declaration comments */ fallback, { "a,b as c" /* alias */ as quoted } from './quoted.js?v=q';
+    import { "renamed value" as renamed, "quoted namespace" as ns } from './quoted-barrel.js';
+    function empty() { return
+      { unreachable: true };
+    }
+    function compact() {return<div data-value={quoted}/>}
+    const literal = "import('./fake.jsx') <Fake />";
+    const template = \`raw import('./fake.jsx') \${<i/>}\`;
+    const nested = await import((await import('./quoted.js?v=q'), './quoted.js?v=q')${variant.file.includes('acorn') ? ',' : ''});
+    const inJSX = <div>{(await import('./quoted.js?v=q')).default}</div>;
+    const jsxInImport = await import((<span/>, './quoted.js?v=q'));
+    export const { alpha, nested: { beta = 4 }, ...rest } = { alpha: 1, nested: {}, gamma: 3 };
+    export const result = { fallback, quoted, renamed, ns, empty: empty(), view: compact(), literal, template,
+      nested: nested.default, child: inJSX.children[0], jsxInImport: jsxInImport.default };
+  `);
+  const mod = await window.import('./range.jsx?v=entry');
+  assert.equal(mod.result.quoted, 23);
+  assert.equal(mod.result.fallback, 23);
+  assert.equal(mod.result.renamed, 23);
+  assert.equal(mod.result.ns['a,b as c'], 23);
+  assert.equal(mod.result.empty, undefined);
+  assert.equal(mod.result.view.tag, 'div');
+  assert.equal(mod.result.literal, "import('./fake.jsx') <Fake />");
+  assert.equal(mod.result.template, "raw import('./fake.jsx') [object Object]");
+  assert.deepEqual([mod.result.nested, mod.result.child, mod.result.jsxInImport], [23, 23, 23]);
+  sources.set('https://example.test/app/destructured-barrel.js', "export * from './range.jsx?v=entry';");
+  const barrel = await window.import('./destructured-barrel.js');
+  assert.deepEqual([barrel.alpha, barrel.beta, barrel.rest.gamma], [1, 4, 3]);
+
+  const nativeCalls = [];
+  window.Bundless.nativeImport = async specifier => { nativeCalls.push(specifier); return { specifier }; };
+  const source = "const next = './native.mjs?v=2'; export const value = await import(next);";
+  const output = await window.Bundless.transpileCode(source, 'https://example.test/app/nested/', 'route.jsx?v=1');
+  await import(`data:text/javascript;base64,${Buffer.from(output).toString('base64')}#${variant.file}-native`);
+  assert.deepEqual(nativeCalls, ['https://example.test/app/nested/native.mjs?v=2']);
+  const nativeLiteral = await window.Bundless.transpileCode("import x from './it\\'s.json';", 'https://example.test/app/', 'json.jsx');
+  assert.match(nativeLiteral, /"https:\/\/example.test\/app\/it's.json"/);
+
+  // Map the final generated positions, including rewritten imports and nested JSX.
+  const mapSource = "import { value } from './no-default.js';\r\nconst view = <div>{value}</div>;\r\nexport const sentinel = (1 + 2) * 3; // 🐉\r\n";
+  for (const preact of [false, true]) {
+    window.Bundless.to = preact ? 'preact' : 'react';
+    const outputs = await Promise.all([0, 1].map(i => window.Bundless.transpileCode(mapSource,
+      'https://example.test/app/', `mapping-${i}.jsx?v=1`)));
+    for (const [i, generated] of outputs.entries()) {
+      assert.equal(generated.includes('sourceMappingURL='), variant.sourceMap);
+      if (!variant.sourceMap) continue;
+      const map = JSON.parse(Buffer.from(generated.split('base64,').at(-1), 'base64').toString());
+      const { TraceMap, originalPositionFor } = await import('@jridgewell/trace-mapping');
+      const trace = new TraceMap(map);
+      const offset = generated.indexOf('sentinel');
+      const before = generated.slice(0, offset).split('\n');
+      const original = originalPositionFor(trace, { line: before.length, column: before.at(-1).length });
+      assert.deepEqual(original, { source: `https://example.test/app/mapping-${i}.jsx?v=1`, line: 3, column: 13, name: null });
+      const expressionOffset = generated.indexOf('(value)');
+      const expressionBefore = generated.slice(0, expressionOffset + 1).split('\n');
+      const expressionOriginal = originalPositionFor(trace, { line: expressionBefore.length, column: expressionBefore.at(-1).length });
+      assert.equal(expressionOriginal.line, 2);
+      assert.equal(expressionOriginal.column, 19);
+    }
+  }
+  window.Bundless.to = 'react';
+}
+
 for (const variant of variants) {
   test(`${variant.file}: built artifact executes module graphs and loader invariants`, async () => {
     const { calls, sources, window } = await loadVariant(variant);
@@ -166,6 +256,8 @@ for (const variant of variants) {
     assert.match(dynamicOutput, /Bundless\.importFrom\(['"]\.\/controller\.mjs\?v=midi['"], ["']https:\/\/example\.test\/app\/dynamic\.(?:jsx|tsx)["']\)/);
     assert.match(dynamicOutput, /import\(['"]mapped-package['"]\)/);
     assert.equal(dynamicOutput.includes('sourceMappingURL='), variant.sourceMap);
+    await probeModuleSeams({ window, sources }, moduleExtension);
+    if (/acorn|meriyah/.test(variant.file)) await probeASTRanges({ window, sources }, variant);
     assert.equal(calls.objectUrls.length, calls.revokedUrls.length);
   });
 }

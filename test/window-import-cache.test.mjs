@@ -5,19 +5,11 @@ import { init as initModuleLexer, parse as parseModuleSyntax } from 'es-module-l
 
 await initModuleLexer;
 
-const sourceWithImport = await readFile(new URL('../src/bundless.utils.js', import.meta.url), 'utf8');
-const source = sourceWithImport.replace(
-  /\nimport \{ init as initModuleLexer, parse as parseModuleSyntax \} from "es-module-lexer";\s*/,
-  '\n'
-);
-const executableSource = source.replace(
-  /\nexport \{[^}]+\};\s*$/,
-  '\nreturn { handleImports, handleScriptTag, toPreact };'
-);
-
-if (executableSource === source) {
-  throw new Error('Unable to load bundless.utils.js test harness.');
-}
+const utils = await readFile(new URL('../src/bundless.utils.js', import.meta.url), 'utf8');
+const lexer = await readFile(new URL('../src/bundless.utils.lexer.js', import.meta.url), 'utf8');
+const executableSource = utils.replace(/\nexport \{[^}]+\};\s*$/, '') +
+  lexer.replace(/^import .*;$/gm, '').replace(/export async function/g, 'async function') +
+  '\nreturn { handleImports, handleScriptTag, toPreact, analyzeModuleSyntax };';
 
 function createHarness({
   href = 'https://example.test/app/index.html',
@@ -110,6 +102,7 @@ function createHarness({
     parseModuleSyntax
   );
 
+  window.Bundless.analyzeModule = exports.analyzeModuleSyntax;
   return { ...exports, calls, window };
 }
 
@@ -228,7 +221,7 @@ test('handleImports preserves bare imports and routes relative dynamic imports w
   const transformed = await handleImports(source, 'https://example.test/app/', 'entry.jsx');
 
   assert.match(transformed, /import React from 'react'/);
-  assert.match(transformed, /import styles from 'https:\/\/example\.test\/app\/panel\.css'/);
+  assert.match(transformed, /import styles from ["']https:\/\/example\.test\/app\/panel\.css["']/);
   assert.match(transformed, /window\.Bundless\.importFrom\('\.\/lazy\.jsx', "https:\/\/example\.test\/app\/entry\.jsx"\)/);
   assert.match(transformed, /window\.Bundless\.importFrom\('\.\/native\.mjs\?mode=controller', "https:\/\/example\.test\/app\/entry\.jsx"\)/);
   assert.match(transformed, /window\.Bundless\.importFrom\(nextModule, "https:\/\/example\.test\/app\/entry\.jsx"\)/);
@@ -319,4 +312,14 @@ test('toPreact keeps fragments as an explicit Preact binding', () => {
 
   assert.match(transformed, /import \{ Fragment, h, render \} from/);
   assert.match(transformed, /h\(Fragment, null, "child"\)/);
+});
+
+
+test('native re-export clauses bypass the local textual binding parser', async () => {
+  const { handleImports } = createHarness();
+  for (const source of [
+    'export * as "two words" from "pkg";',
+    'export * as ns /* hi */ from "pkg";',
+    'import /* hi */ { x } from "pkg";',
+  ]) assert.equal(await handleImports(source, 'https://example.test/app/', 'native.js'), source);
 });

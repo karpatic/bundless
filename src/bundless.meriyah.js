@@ -1,6 +1,6 @@
 import * as meriyah from "./../rsc/meriyah/meriyah.esm.js";
-import { handleImports, handleScriptTag, hasBundlessPrefetchScriptTags, runWhenDocumentReady, startBundlessPrefetches, toPreact } from './bundless.utils.js'
-import { transformAST } from './bundless.utils.ast.transpiler.js';
+import { getModuleReplacements, handleScriptTag, hasBundlessPrefetchScriptTags, runWhenDocumentReady, startBundlessPrefetches, preactImports } from './bundless.utils.js'
+import { transformAST, analyzeAST } from './bundless.utils.ast.transpiler.js';
 
 
 
@@ -8,15 +8,15 @@ window.Bundless = {
   ...window.Bundless,
   transformAST,
   transformModuleSyntax,
+  analyzeModule,
   transpileCode,
   cache: true,
   to: 'react',
   prod: false,
 };
 
-let SMTools = {};
-async function transformJSX(code, filePath, includeSourceMap = true) {
-  const ast = meriyah.parse(code, {
+function parseAST(code) {
+  return meriyah.parse(code, {
     module: true,
     jsx: true,
     webcompat: true,
@@ -24,63 +24,31 @@ async function transformJSX(code, filePath, includeSourceMap = true) {
     ranges: true,
     raw: true,
     impliedStrict: true,
-    onComment: (type, value, start, end) => {
-      console.log(`Comment: ${type} - ${value} [${start}, ${end}]`);
-    },
-    onToken: (token) => {
-      // console.log('Token:', token);
-    }
   });
+}
 
-  // Update source mapper settings for this specific file
-  if (includeSourceMap && !window.Bundless.prod) {
-
-    const loadSourceMapTools = async () => {
-      console.log('Loading Sucrase');
-      const { GenMapping, maybeAddSegment, toEncodedMap } = await import('../rsc/sucrase/gen-mapping.umd.js');
-      const { initSourceMapper, setActiveMapper } = await import('./bundless.utils.ast.sourecmapper.js');
-      SMTools = { GenMapping, maybeAddSegment, toEncodedMap, initSourceMapper, setActiveMapper };
-      return SMTools
-    };
-    SMTools = await loadSourceMapTools();
-
-    console.log('~~~~ transformJSX:', 'filePath', filePath);
-    const sourceMapper = SMTools.initSourceMapper({
-      GenMapping: SMTools.GenMapping,
-      maybeAddSegment: SMTools.maybeAddSegment,
-      sourceFilename: filePath,
-      sourceCode: code
-    });
-
-    SMTools.setActiveMapper(sourceMapper);
-    SMTools.map = sourceMapper.map;
-    SMTools.updatePosition = sourceMapper.updatePosition;
-  }
-
-  // return JSON.stringify(ast, null, 2);
-  return transformAST(ast, {
-    code,
-    filePath,
-    ...(includeSourceMap ? SMTools : {}),
-  });
+function analyzeModule(code) {
+  return analyzeAST(parseAST(code));
 }
 
 async function transformModuleSyntax(code, basePath, filename) {
-  const result = await transformJSX(code, basePath + filename, false);
-  return result.code;
+  return transformAST(parseAST(code), { code }).code;
 }
 
 async function transpileCode(code, basePath, filename) {
-  const { code: compiledCode, map } = await transformJSX(code, basePath + filename);
-  let transpiledCode = await handleImports(compiledCode, basePath, filename);
-  if(window.Bundless.to === 'preact'){
-    transpiledCode = toPreact(transpiledCode);
+  const ast = parseAST(code);
+  const replacements = await getModuleReplacements(code, basePath, filename, analyzeAST(ast));
+  let debug = {};
+  if (!window.Bundless.prod) {
+    const { GenMapping, maybeAddSegment, toEncodedMap } = await import('../rsc/sucrase/gen-mapping.umd.js');
+    const { initSourceMapper } = await import('./bundless.utils.ast.sourecmapper.js');
+    debug = { ...initSourceMapper({ GenMapping, maybeAddSegment, sourceFilename: basePath + filename, sourceCode: code }), toEncodedMap };
   }
-  if(window.Bundless.prod){
-    return transpiledCode;
-  }
-  const sourceMapComment = `//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(map))}`;
-  return `${transpiledCode}\n${sourceMapComment}`;
+  const preact = window.Bundless.to === 'preact';
+  const result = transformAST(ast, { code, replacements, preact, prefix: preact ? preactImports : '', ...debug });
+  const transpiledCode = result.code;
+  if (window.Bundless.prod) return transpiledCode;
+  return `${transpiledCode}\n//# sourceMappingURL=data:application/json;base64,${btoa(JSON.stringify(result.map))}`;
 }
 
 runWhenDocumentReady(async () => {

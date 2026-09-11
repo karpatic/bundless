@@ -1,9 +1,11 @@
-import { handleImports, handleScriptTag, hasBundlessPrefetchScriptTags, runWhenDocumentReady, startBundlessPrefetches, toPreact } from './bundless.utils.js'
+import { handleImports, analyzeModuleSyntax } from "./bundless.utils.lexer.js";
+import { handleScriptTag, hasBundlessPrefetchScriptTags, runWhenDocumentReady, startBundlessPrefetches, toPreact } from './bundless.utils.js'
 import * as sucrase from './../rsc/sucrase/sucrase.esm.js';
 
 window.Bundless = {
   ...window.Bundless,
   transformModuleSyntax,
+  analyzeModule,
   transpileCode,
   cache: true,
   to: 'react',
@@ -23,6 +25,10 @@ function transformJSX(code, filePath, includeSourceMap = true) {
 
 async function transformModuleSyntax(code, basePath, filename) {
   return transformJSX(code, basePath + filename, false).code;
+}
+
+async function analyzeModule(code, basePath, filename) {
+  return analyzeModuleSyntax(await transformModuleSyntax(code, basePath, filename), basePath + filename);
 }
 
 async function transpileCode(code, basePath, filename) {

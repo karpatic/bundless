@@ -1,5 +1,6 @@
+import { handleImports, analyzeModuleSyntax } from "./bundless.utils.lexer.js";
 // Babel.transform, .availablePlugins, .availablePresets, .registerPlugin, .registerPreset, .packages.[generator,parser,template,traverse,types]
-import { handleImports, handleScriptTag, hasBundlessPrefetchScriptTags, runWhenDocumentReady, startBundlessPrefetches } from './bundless.utils.js'
+import { handleScriptTag, hasBundlessPrefetchScriptTags, runWhenDocumentReady, startBundlessPrefetches } from './bundless.utils.js'
 
 
 
@@ -7,6 +8,7 @@ import { handleImports, handleScriptTag, hasBundlessPrefetchScriptTags, runWhenD
 window.Bundless = {
   ...window.Bundless,
   transformModuleSyntax,
+  analyzeModule,
   transpileCode,
   to: 'react',
   cache: true,
@@ -31,6 +33,10 @@ function transformJSX(code, filePath, includeSourceMap = true) {
 
 async function transformModuleSyntax(code, pathTo, filename) {
   return transformJSX(code, pathTo + filename, false).code;
+}
+
+async function analyzeModule(code, basePath, filename) {
+  return analyzeModuleSyntax(await transformModuleSyntax(code, basePath, filename), basePath + filename);
 }
 
 async function transpileCode(code, pathTo, filename) {

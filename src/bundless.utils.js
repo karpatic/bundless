@@ -1,81 +1,9 @@
-// transpile.js
-
-import { init as initModuleLexer, parse as parseModuleSyntax } from "es-module-lexer";
+// Shared module loading and routing.
 
 const LOCAL_MODULE_IMPORT_PATTERN = /^(?:\.{1,2}\/|\/)/;
 const MODULE_FILE_EXTENSION_PATTERN = /\.(?:mjs|jsx?|tsx?)$/i;
 const DYNAMIC_SOURCE_FILE_EXTENSION_PATTERN = /\.(?:jsx?|tsx?)$/i;
 const IDENTIFIER_PROPERTY_PATTERN = /^[A-Za-z_$][\w$]*$/;
-
-function splitImportSpecifiers(specifiers) {
-  return specifiers
-    .split(",")
-    .map((specifier) => specifier.trim())
-    .filter(Boolean);
-}
-
-function normalizeImportName(name) {
-  const trimmed = name.trim();
-  const quote = trimmed[0];
-  if ((quote === "'" || quote === '"') && trimmed[trimmed.length - 1] === quote) {
-    return trimmed.slice(1, -1);
-  }
-  return trimmed;
-}
-
-function parseNamedImportSpecifiers(specifiers) {
-  return splitImportSpecifiers(specifiers)
-    .map((specifier) => {
-      if (/^type\s+/.test(specifier)) {
-        return false;
-      }
-
-      const alias = specifier.match(/^(.+?)\s+as\s+(.+)$/);
-      const imported = normalizeImportName(alias ? alias[1] : specifier);
-      const local = normalizeImportName(alias ? alias[2] : specifier);
-      return { imported, local };
-    })
-    .filter(Boolean);
-}
-
-function parseImportClause(importClause) {
-  const imports = {
-    defaultImport: false,
-    namespaceImport: false,
-    namedImports: [],
-    typeOnly: false,
-  };
-
-  if (!importClause) {
-    return imports;
-  }
-
-  const clause = importClause.trim();
-  if (/^type\b/.test(clause)) {
-    imports.typeOnly = true;
-    return imports;
-  }
-
-  let remainingClause = clause;
-  const namedImportMatch = remainingClause.match(/\{([\s\S]*)\}/);
-  if (namedImportMatch) {
-    imports.namedImports = parseNamedImportSpecifiers(namedImportMatch[1]);
-    remainingClause = remainingClause.replace(namedImportMatch[0], "");
-  }
-
-  const namespaceImportMatch = remainingClause.match(/\*\s+as\s+([^,\s]+)/);
-  if (namespaceImportMatch) {
-    imports.namespaceImport = namespaceImportMatch[1];
-    remainingClause = remainingClause.replace(namespaceImportMatch[0], "");
-  }
-
-  const defaultImport = remainingClause.replace(/,/g, " ").trim();
-  if (defaultImport) {
-    imports.defaultImport = defaultImport.split(/\s+/)[0];
-  }
-
-  return imports;
-}
 
 function getModuleUrlBase(currentFilePath) {
   const basePath = currentFilePath || location.href;
@@ -171,7 +99,7 @@ function importFrom(specifier, importerUrl, options) {
 }
 
 // This transforms local static import statements into dynamic import expressions.
-function transformStaticImportsToDynamic(importClause, imports, moduleImportExpression, modulePath, importState) {
+function transformStaticImportsToDynamic(hasBindings, imports, moduleImportExpression, modulePath, importState) {
   if (imports.typeOnly) {
     return "";
   }
@@ -192,7 +120,7 @@ function transformStaticImportsToDynamic(importClause, imports, moduleImportExpr
     }
   }
 
-  if (statements.length === 0 && !importClause) {
+  if (statements.length === 0 && !hasBindings) {
     statements.push(`await ${moduleImportExpression};`);
   }
 
@@ -310,15 +238,6 @@ function getModuleSource(normalizedPath) {
   return sourcePromise;
 }
 
-async function parseCompiledModule(code, filename) {
-  await initModuleLexer;
-  return parseModuleSyntax(code, filename);
-}
-
-function isExportStarStatement(statement) {
-  return /^\s*export\s*\*(?!\s*as\b)\s*/.test(statement);
-}
-
 async function inspectModuleExportNames(normalizedPath, stack) {
   if (stack.has(normalizedPath)) {
     throw new SyntaxError(
@@ -330,15 +249,7 @@ async function inspectModuleExportNames(normalizedPath, stack) {
   const nextStack = new Set(stack);
   nextStack.add(normalizedPath);
   const { code, basePath, filename } = await getModuleSource(normalizedPath);
-  if (typeof window.Bundless.transformModuleSyntax !== "function") {
-    throw new Error("Bundless compiler did not provide transformModuleSyntax().");
-  }
-  const compiledCode = await window.Bundless.transformModuleSyntax(
-    code,
-    basePath,
-    filename
-  );
-  const [imports, exports] = await parseCompiledModule(compiledCode, normalizedPath);
+  const [imports, exports] = await window.Bundless.analyzeModule(code, basePath, filename);
   const directNames = new Set(exports.map((item) => item.n));
   const starOrigins = new Map();
 
@@ -346,8 +257,7 @@ async function inspectModuleExportNames(normalizedPath, stack) {
     if (moduleImport.d !== -1 || !moduleImport.n) {
       continue;
     }
-    const statement = compiledCode.slice(moduleImport.ss, moduleImport.se);
-    if (!isExportStarStatement(statement)) {
+    if (moduleImport.kind !== "star") {
       continue;
     }
     if (!LOCAL_MODULE_IMPORT_PATTERN.test(moduleImport.n) ||
@@ -576,28 +486,6 @@ window.import = function (path) {
 };
 
 
-function applyModuleReplacements(code, replacements) {
-  return replacements
-    .sort((left, right) => right.start - left.start)
-    .reduce(
-      (result, replacement) =>
-        result.slice(0, replacement.start) + replacement.code + result.slice(replacement.end),
-      code
-    );
-}
-
-function getStaticImportClause(code, moduleImport) {
-  const prefix = code.slice(moduleImport.ss + "import".length, moduleImport.s - 1).trim();
-  if (!prefix) {
-    return "";
-  }
-  const fromMatch = prefix.match(/^([\s\S]*?)\s+from\s*$/);
-  if (!fromMatch) {
-    throw new SyntaxError(`Bundless could not parse static import: ${code.slice(moduleImport.ss, moduleImport.se)}`);
-  }
-  return fromMatch[1].trim();
-}
-
 function formatExportName(name) {
   return IDENTIFIER_PROPERTY_PATTERN.test(name) ? name : JSON.stringify(name);
 }
@@ -608,12 +496,7 @@ function getRequiredExportValue(moduleExpression, imported, modulePath) {
   return `((mod) => { if (!Object.prototype.hasOwnProperty.call(mod, ${importName})) { throw new SyntaxError("The requested module " + ${importPath} + " does not provide an export named " + ${importName} + "."); } return mod${getModuleProperty(imported)}; })(${moduleExpression})`;
 }
 
-function transformNamedReexport(statement, moduleUrl, index) {
-  const clauseMatch = statement.match(/^\s*export\s*\{([\s\S]*?)\}\s*from\b/);
-  if (!clauseMatch) {
-    throw new SyntaxError(`Bundless could not parse named re-export: ${statement}`);
-  }
-  const specifiers = parseNamedImportSpecifiers(clauseMatch[1]);
+function transformNamedReexport(specifiers, moduleUrl, index) {
   const namespaceName = `__bundless_reexport_${index}`;
   const declarations = [`const ${namespaceName} = await window.import(${JSON.stringify(moduleUrl)});`];
   const exports = [];
@@ -629,13 +512,9 @@ function transformNamedReexport(statement, moduleUrl, index) {
   return declarations.join(" ");
 }
 
-function transformNamespaceReexport(statement, moduleUrl, index) {
-  const namespaceMatch = statement.match(/^\s*export\s*\*\s*as\s*([^\s]+)\s*from\b/);
-  if (!namespaceMatch) {
-    throw new SyntaxError(`Bundless could not parse namespace re-export: ${statement}`);
-  }
+function transformNamespaceReexport(exported, moduleUrl, index) {
   const bindingName = `__bundless_reexport_namespace_${index}`;
-  return `const ${bindingName} = await window.import(${JSON.stringify(moduleUrl)}); export { ${bindingName} as ${formatExportName(normalizeImportName(namespaceMatch[1]))} };`;
+  return `const ${bindingName} = await window.import(${JSON.stringify(moduleUrl)}); export { ${bindingName} as ${formatExportName(exported)} };`;
 }
 
 function transformStarReexport(moduleUrl, names, index) {
@@ -655,26 +534,9 @@ function transformStarReexport(moduleUrl, names, index) {
   return declarations.join(" ");
 }
 
-function transformDynamicImport(code, moduleImport, importerUrl) {
-  if (moduleImport.n && !LOCAL_MODULE_IMPORT_PATTERN.test(moduleImport.n)) {
-    return false;
-  }
-  if (moduleImport.a !== -1) {
-    throw new SyntaxError(
-      `Bundless cannot route caller-relative dynamic imports with import attributes: ${code.slice(moduleImport.ss, moduleImport.se)}`
-    );
-  }
-  const argumentsSource = code.slice(moduleImport.d + 1, moduleImport.se - 1);
-  return `window.Bundless.importFrom(${argumentsSource}, ${JSON.stringify(importerUrl)})`;
-}
-
-// Rewrites module syntax only after JSX/TypeScript compilation. es-module-lexer
-// prevents import() expressions, comments, strings, and re-exports from being
-// mistaken for one another.
-async function handleImports(code, pathTo, filename) {
-  if (!code.includes("import") && !code.includes("export")) {return code;}
+// Both compiler paths supply module metadata; only Babel/Sucrase load a lexer.
+async function getModuleReplacements(code, pathTo, filename, [moduleImports, exports]) {
   const importerUrl = getModuleFileUrl(pathTo, filename);
-  const [moduleImports, exports] = await parseCompiledModule(code, importerUrl);
   const importState = {
     importedLocals: new Set(),
   };
@@ -686,8 +548,7 @@ async function handleImports(code, pathTo, filename) {
     if (moduleImport.d !== -1 || !moduleImport.n) {
       continue;
     }
-    const statement = code.slice(moduleImport.ss, moduleImport.se);
-    if (isExportStarStatement(statement) &&
+    if (moduleImport.kind === "star" &&
         LOCAL_MODULE_IMPORT_PATTERN.test(moduleImport.n) &&
         isTransformableLocalModuleImport(moduleImport.n)) {
       const moduleUrl = resolveLocalModuleImport(moduleImport.n, pathTo);
@@ -713,10 +574,15 @@ async function handleImports(code, pathTo, filename) {
   for (const [index, moduleImport] of moduleImports.entries()) {
     if (moduleImport.d !== -1) {
       if (moduleImport.d >= 0) {
-        const replacement = transformDynamicImport(code, moduleImport, importerUrl);
-        if (replacement) {
-          replacements.push({ start: moduleImport.ss, end: moduleImport.se, code: replacement });
+        if (moduleImport.n && !LOCAL_MODULE_IMPORT_PATTERN.test(moduleImport.n)) continue;
+        if (moduleImport.a !== -1) {
+          throw new SyntaxError(`Bundless cannot route caller-relative dynamic imports with import attributes: ${code.slice(moduleImport.ss, moduleImport.se)}`);
         }
+        const [start, end] = moduleImport.argument;
+        replacements.push(
+          { start: moduleImport.ss, end: start, code: `window.Bundless.importFrom(${moduleImport.sequence ? "(" : ""}` },
+          { start: end, end: moduleImport.se, code: `${moduleImport.sequence ? ")" : ""}, ${JSON.stringify(importerUrl)})` }
+        );
       }
       continue;
     }
@@ -725,7 +591,7 @@ async function handleImports(code, pathTo, filename) {
     }
 
     const statement = code.slice(moduleImport.ss, moduleImport.se);
-    const isReexport = /^\s*export\b/.test(statement);
+    const isReexport = moduleImport.kind !== "import";
     if (isPreactReactPackageImport(moduleImport.n) && !isReexport) {
       replacements.push({ start: moduleImport.ss, end: moduleImport.se, code: "" });
       continue;
@@ -736,7 +602,7 @@ async function handleImports(code, pathTo, filename) {
 
     const moduleUrl = resolveLocalModuleImport(moduleImport.n, pathTo);
     if (!isTransformableLocalModuleImport(moduleImport.n)) {
-      replacements.push({ start: moduleImport.s, end: moduleImport.e, code: moduleUrl });
+      replacements.push({ start: moduleImport.s - 1, end: moduleImport.e + 1, code: JSON.stringify(moduleUrl) });
       continue;
     }
     if (moduleImport.a !== -1) {
@@ -754,10 +620,10 @@ async function handleImports(code, pathTo, filename) {
           starNameOwners.get(name) === moduleImport.ss
         );
         replacement = transformStarReexport(moduleUrl, unambiguousNames, index);
-      } else if (/^\s*export\s*\*\s*as\b/.test(statement)) {
-        replacement = transformNamespaceReexport(statement, moduleUrl, index);
-      } else if (/^\s*export\s*\{/.test(statement)) {
-        replacement = transformNamedReexport(statement, moduleUrl, index);
+      } else if (moduleImport.kind === "namespace") {
+        replacement = transformNamespaceReexport(moduleImport.exported, moduleUrl, index);
+      } else if (moduleImport.kind === "named") {
+        replacement = transformNamedReexport(moduleImport.bindings, moduleUrl, index);
       } else {
         throw new SyntaxError(`Bundless does not support this local re-export form: ${statement}`);
       }
@@ -765,14 +631,13 @@ async function handleImports(code, pathTo, filename) {
       continue;
     }
 
-    const importClause = getStaticImportClause(code, moduleImport);
-    const imports = parseImportClause(importClause);
+    const imports = moduleImport.bindings;
     const importTarget = getStaticImportTarget(moduleImport.n, pathTo, imports);
     replacements.push({
       start: moduleImport.ss,
       end: moduleImport.se,
       code: transformStaticImportsToDynamic(
-        importClause,
+        moduleImport.hasBindings,
         imports,
         importTarget.moduleImportExpression,
         importTarget.modulePath,
@@ -781,14 +646,13 @@ async function handleImports(code, pathTo, filename) {
     });
   }
 
-  return applyModuleReplacements(code, replacements);
+  return replacements;
 }
+
+const preactImports = `import { Fragment, h, render } from 'https://esm.sh/preact@10.5.13/es2022/preact.mjs';\nimport { useState, useEffect, useContext, useRef, useMemo } from 'https://esm.sh/preact@10.5.13/es2022/hooks.mjs';\n`;
 
 function toPreact(code){
   if(window.Bundless.to == 'preact'){
-    let prefix;
-    prefix = `import { Fragment, h, render } from 'https://esm.sh/preact@10.5.13/es2022/preact.mjs';\n`;
-    prefix += `import { useState, useEffect, useContext, useRef, useMemo } from 'https://esm.sh/preact@10.5.13/es2022/hooks.mjs';\n`;
     code = code.replace(/React.createElement/g, "h");
     code = code.replace(/ReactDOM.render/g, "render");
     code = code.replace(/React.useState/g, "useState");
@@ -798,9 +662,9 @@ function toPreact(code){
     code = code.replace(/React.useMemo/g, "useMemo"); // useContext, useMemo
     code = code.replace(/React.Fragment/g, "Fragment");
 
-    code = prefix + code;
+    code = preactImports + code;
   }
   return code;
 }
 
-export {handleBundlessPrefetchScriptTags, handleImports, handleScriptTag, hasBundlessPrefetchScriptTags, runWhenDocumentReady, startBundlessPrefetches, toPreact};
+export {handleBundlessPrefetchScriptTags, getModuleReplacements, isTransformableLocalModuleImport, preactImports, handleScriptTag, hasBundlessPrefetchScriptTags, runWhenDocumentReady, startBundlessPrefetches, toPreact};
